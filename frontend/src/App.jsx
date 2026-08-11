@@ -1,16 +1,91 @@
-import { useState } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import ShelfManager from './components/ShelfManager';
 import Checkout from './components/Checkout';
 import Inventory from './components/Inventory';
 import Dashboard from './components/Dashboard';
+import OrderHistory from './components/OrderHistory';
+import Customers from './components/Customers';
 
 /* ===================================================================
-   App — Giao diện chính: Login/Register → ShelfManager / Checkout
+   SVG ICONS
+   =================================================================== */
+const icons = {
+  store: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
+    </svg>
+  ),
+  dashboard: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+    </svg>
+  ),
+  shelves: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+    </svg>
+  ),
+  checkout: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+    </svg>
+  ),
+  inventory: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    </svg>
+  ),
+  sun: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+    </svg>
+  ),
+  moon: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+    </svg>
+  ),
+  logout: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+    </svg>
+  ),
+  mail: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+    </svg>
+  ),
+  lock: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+    </svg>
+  ),
+  user: (cls = 'w-5 h-5') => (
+    <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    </svg>
+  ),
+};
+
+/* ===================================================================
+   THEME CONTEXT
+   =================================================================== */
+export const ThemeContext = createContext();
+
+export function useTheme() {
+  return useContext(ThemeContext);
+}
+
+/* ===================================================================
+   App — Main Application Shell
    =================================================================== */
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [storeName, setStoreName] = useState(localStorage.getItem('store_name') || '');
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'shelves' | 'checkout' | 'inventory'
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Theme
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   // Login / Register form state
   const [isLogin, setIsLogin] = useState(true);
@@ -20,6 +95,16 @@ export default function App() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -52,7 +137,6 @@ export default function App() {
         setToken(data.data.token);
         setStoreName(data.data.store.store_name);
       } else {
-        // Đăng ký thành công → chuyển sang form login
         setSuccess('Đăng ký thành công! Vui lòng đăng nhập.');
         setIsLogin(true);
         setPassword('');
@@ -74,171 +158,299 @@ export default function App() {
   };
 
   const TABS = [
-    { id: 'dashboard', label: 'Trang chủ', icon: '📊' },
-    { id: 'shelves', label: 'Kệ hàng', icon: '📦' },
-    { id: 'checkout', label: 'Tính tiền', icon: '🧾' },
-    { id: 'inventory', label: 'Lô & Cảnh báo', icon: '⚠️' },
+    { id: 'dashboard', label: 'Trang chủ', icon: icons.dashboard },
+    { id: 'shelves', label: 'Kệ hàng', icon: icons.shelves },
+    { id: 'checkout', label: 'Tính tiền', icon: icons.checkout },
+    { id: 'orders', label: 'Hóa đơn', icon: icons.checkout },
+    { id: 'customers', label: 'Khách hàng', icon: icons.user },
+    { id: 'inventory', label: 'Lô & Cảnh báo', icon: icons.inventory },
   ];
 
   /* ========== ĐÃ ĐĂNG NHẬP → Hiện tabs ========== */
   if (token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-        {/* Top navigation */}
-        <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🏪</span>
-              <div>
-                <p className="font-bold text-gray-900 text-sm sm:text-base leading-tight">{storeName}</p>
-                <p className="text-xs text-gray-400">Quản lý Tạp hóa</p>
+      <ThemeContext.Provider value={{ theme, toggleTheme }}>
+        <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+          {/* ===== TOP NAVIGATION ===== */}
+          <nav className="nav-themed sticky top-0 z-40">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4">
+              {/* Brand */}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                     style={{ background: 'linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to))' }}>
+                  {icons.store('w-5 h-5 text-white')}
+                </div>
+                <div className="hidden sm:block">
+                  <p className="font-bold text-sm leading-tight" style={{ color: 'var(--text-primary)' }}>
+                    {storeName}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Quản lý Tạp hóa</p>
+                </div>
+              </div>
+
+              {/* Tab buttons — Desktop */}
+              <div className="hidden md:flex items-center gap-1 rounded-xl p-1"
+                   style={{ background: 'var(--bg-inset)' }}>
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer"
+                    style={{
+                      background: activeTab === tab.id ? 'var(--bg-surface)' : 'transparent',
+                      color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                      boxShadow: activeTab === tab.id ? 'var(--shadow-sm)' : 'none',
+                    }}
+                  >
+                    {tab.icon('w-4 h-4')}
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Right actions */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Theme toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer"
+                  style={{
+                    background: 'var(--bg-inset)',
+                    color: 'var(--text-tertiary)',
+                  }}
+                  title={theme === 'dark' ? 'Chuyển sang sáng' : 'Chuyển sang tối'}
+                >
+                  {theme === 'dark' ? icons.sun('w-4.5 h-4.5') : icons.moon('w-4.5 h-4.5')}
+                </button>
+
+                {/* Logout */}
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
+                  style={{ color: 'var(--text-muted)' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                >
+                  {icons.logout('w-4 h-4')}
+                  <span className="hidden sm:inline">Đăng xuất</span>
+                </button>
               </div>
             </div>
 
-            {/* Tab buttons */}
-            <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`
-                    flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer
-                    ${activeTab === tab.id
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
-                    }
-                  `}
-                >
-                  <span>{tab.icon}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </button>
-              ))}
+            {/* Tab buttons — Mobile (scrollable) */}
+            <div className="md:hidden border-t" style={{ borderColor: 'var(--border-secondary)' }}>
+              <div className="flex overflow-x-auto px-2 py-1.5 gap-1 custom-scrollbar">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex-shrink-0"
+                    style={{
+                      background: activeTab === tab.id ? 'var(--bg-surface)' : 'transparent',
+                      color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
+                      boxShadow: activeTab === tab.id ? 'var(--shadow-sm)' : 'none',
+                    }}
+                  >
+                    {tab.icon('w-4 h-4')}
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
+          </nav>
 
-            <button
-              onClick={logout}
-              className="text-sm text-gray-400 hover:text-red-500 font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
-            >
-              Đăng xuất
-            </button>
-          </div>
-        </nav>
-
-        {/* Main content — render theo tab */}
-        {activeTab === 'dashboard' && <Dashboard />}
-        {activeTab === 'shelves' && <ShelfManager />}
-        {activeTab === 'checkout' && <Checkout />}
-        {activeTab === 'inventory' && <Inventory />}
-      </div>
+          {/* Main content */}
+          <main className="animate-fade-in" key={activeTab}>
+            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'shelves' && <ShelfManager />}
+            {activeTab === 'checkout' && <Checkout />}
+            {activeTab === 'orders' && <OrderHistory />}
+            {activeTab === 'customers' && <Customers />}
+            {activeTab === 'inventory' && <Inventory />}
+          </main>
+        </div>
+      </ThemeContext.Provider>
     );
   }
 
   /* ========== CHƯA ĐĂNG NHẬP → Form Login/Register ========== */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center p-4">
-      {/* Decorative blobs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl" />
-      </div>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+           style={{ background: 'var(--bg-primary)' }}>
 
-      <div className="relative w-full max-w-md animate-fade-in">
-        {/* Card */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-black/10 p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-300/50">
-              <span className="text-3xl">🏪</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Quản lý Tạp hóa</h1>
-            <p className="text-gray-400 mt-1.5 text-sm">
-              {isLogin ? 'Đăng nhập vào cửa hàng của bạn' : 'Tạo tài khoản cửa hàng mới'}
-            </p>
-          </div>
-
-          {/* Messages */}
-          {error && (
-            <div className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium animate-slide-down">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 text-sm font-medium animate-slide-down">
-              {success}
-            </div>
-          )}
-
-          {/* Form */}
-          <form onSubmit={handleAuth} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tên cửa hàng</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="VD: Tạp hóa Minh Anh"
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 outline-none text-sm transition-all"
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com"
-                required
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 outline-none text-sm transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Mật khẩu</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Ít nhất 6 ký tự"
-                required
-                minLength={6}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 outline-none text-sm transition-all"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold text-sm shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Đang xử lý...
-                </span>
-              ) : (
-                isLogin ? 'Đăng nhập' : 'Đăng ký'
-              )}
-            </button>
-          </form>
-
-          {/* Toggle login/register */}
-          <p className="text-center text-sm text-gray-400 mt-6">
-            {isLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}
-            <button
-              onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }}
-              className="text-indigo-500 font-semibold ml-1.5 hover:text-indigo-700 hover:underline transition-colors cursor-pointer"
-            >
-              {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
-            </button>
-          </p>
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-72 h-72 rounded-full animate-float"
+               style={{ background: 'linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to))', opacity: 0.07, filter: 'blur(60px)' }} />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full animate-float"
+               style={{ background: 'linear-gradient(135deg, #a855f7, #ec4899)', opacity: 0.05, filter: 'blur(80px)', animationDelay: '1.5s' }} />
+          <div className="absolute top-2/3 left-1/3 w-48 h-48 rounded-full animate-float"
+               style={{ background: 'var(--success)', opacity: 0.04, filter: 'blur(50px)', animationDelay: '3s' }} />
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-white/50 mt-6">
-          Ứng dụng Quản lý Tạp hóa • Đồ án Web
-        </p>
+        {/* Theme toggle on login page */}
+        <button
+          onClick={toggleTheme}
+          className="absolute top-5 right-5 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer z-10"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-primary)', color: 'var(--text-tertiary)' }}
+          title={theme === 'dark' ? 'Chuyển sang sáng' : 'Chuyển sang tối'}
+        >
+          {theme === 'dark' ? icons.sun('w-5 h-5') : icons.moon('w-5 h-5')}
+        </button>
+
+        <div className="relative w-full max-w-md animate-fade-in-up">
+          {/* Card */}
+          <div className="rounded-2xl overflow-hidden"
+               style={{
+                 background: 'var(--bg-surface)',
+                 border: '1px solid var(--border-primary)',
+                 boxShadow: 'var(--shadow-xl)',
+               }}>
+
+            {/* Header gradient band */}
+            <div className="h-1.5 animate-gradient"
+                 style={{ background: 'linear-gradient(90deg, var(--brand-gradient-from), var(--brand-gradient-to), #ec4899, var(--brand-gradient-from))', backgroundSize: '200% 200%' }} />
+
+            <div className="p-8">
+              {/* Logo & Title */}
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-glow"
+                     style={{ background: 'linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to))' }}>
+                  {icons.store('w-8 h-8 text-white')}
+                </div>
+                <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                  Quản lý Tạp hóa
+                </h1>
+                <p className="mt-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {isLogin ? 'Đăng nhập vào cửa hàng của bạn' : 'Tạo tài khoản cửa hàng mới'}
+                </p>
+              </div>
+
+              {/* Messages */}
+              {error && (
+                <div className="mb-4 p-3.5 rounded-xl text-sm font-medium animate-slide-down flex items-center gap-2"
+                     style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-light)', color: 'var(--danger)' }}>
+                  {icons.inventory('w-4 h-4 flex-shrink-0')}
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="mb-4 p-3.5 rounded-xl text-sm font-medium animate-slide-down flex items-center gap-2"
+                     style={{ background: 'var(--success-bg)', border: '1px solid var(--success-light)', color: 'var(--success)' }}>
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {success}
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleAuth} className="space-y-4">
+                {!isLogin && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                      Tên cửa hàng
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                        {icons.store('w-4 h-4')}
+                      </span>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="VD: Tạp hóa Minh Anh"
+                        required
+                        className="w-full py-3 input-themed"
+                        style={{ paddingLeft: '2.5rem', paddingRight: '1rem' }}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Email
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                      {icons.mail('w-4 h-4')}
+                    </span>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="email@example.com"
+                      required
+                      className="w-full py-3 input-themed"
+                      style={{ paddingLeft: '2.5rem', paddingRight: '1rem' }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Mật khẩu
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
+                      {icons.lock('w-4 h-4')}
+                    </span>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Ít nhất 6 ký tự"
+                      required
+                      minLength={6}
+                      className="w-full py-3 input-themed"
+                      style={{ paddingLeft: '2.5rem', paddingRight: '1rem' }}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl text-white font-bold text-sm transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to))',
+                    boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)',
+                  }}
+                  onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 25px rgba(99, 102, 241, 0.4)'; }}}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(99, 102, 241, 0.3)'; }}
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Đang xử lý...
+                    </span>
+                  ) : (
+                    isLogin ? 'Đăng nhập' : 'Đăng ký'
+                  )}
+                </button>
+              </form>
+
+              {/* Toggle login/register */}
+              <p className="text-center text-sm mt-6" style={{ color: 'var(--text-muted)' }}>
+                {isLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}
+                <button
+                  onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }}
+                  className="font-semibold ml-1.5 transition-colors cursor-pointer"
+                  style={{ color: 'var(--brand-primary)' }}
+                  onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                  onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                >
+                  {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
+                </button>
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <p className="text-center text-xs mt-6" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
+            Ứng dụng Quản lý Tạp hóa • AppBanLe
+          </p>
+        </div>
       </div>
-    </div>
+    </ThemeContext.Provider>
   );
 }

@@ -5,48 +5,12 @@ import api from '../services/api';
    BẢNG MÀU CHO KỆ HÀNG — mỗi kệ được gán một theme màu khác nhau
    =================================================================== */
 const THEMES = [
-  {
-    gradient: 'bg-gradient-to-br from-violet-500 to-purple-600',
-    light: 'bg-violet-50', border: 'border-violet-300',
-    ring: 'ring-violet-400/40', text: 'text-violet-700',
-    badge: 'bg-violet-100 text-violet-700',
-    iconBg: 'bg-violet-100', iconText: 'text-violet-600',
-  },
-  {
-    gradient: 'bg-gradient-to-br from-emerald-500 to-teal-600',
-    light: 'bg-emerald-50', border: 'border-emerald-300',
-    ring: 'ring-emerald-400/40', text: 'text-emerald-700',
-    badge: 'bg-emerald-100 text-emerald-700',
-    iconBg: 'bg-emerald-100', iconText: 'text-emerald-600',
-  },
-  {
-    gradient: 'bg-gradient-to-br from-amber-500 to-orange-600',
-    light: 'bg-amber-50', border: 'border-amber-300',
-    ring: 'ring-amber-400/40', text: 'text-amber-700',
-    badge: 'bg-amber-100 text-amber-700',
-    iconBg: 'bg-amber-100', iconText: 'text-amber-600',
-  },
-  {
-    gradient: 'bg-gradient-to-br from-rose-500 to-pink-600',
-    light: 'bg-rose-50', border: 'border-rose-300',
-    ring: 'ring-rose-400/40', text: 'text-rose-700',
-    badge: 'bg-rose-100 text-rose-700',
-    iconBg: 'bg-rose-100', iconText: 'text-rose-600',
-  },
-  {
-    gradient: 'bg-gradient-to-br from-sky-500 to-blue-600',
-    light: 'bg-sky-50', border: 'border-sky-300',
-    ring: 'ring-sky-400/40', text: 'text-sky-700',
-    badge: 'bg-sky-100 text-sky-700',
-    iconBg: 'bg-sky-100', iconText: 'text-sky-600',
-  },
-  {
-    gradient: 'bg-gradient-to-br from-indigo-500 to-violet-600',
-    light: 'bg-indigo-50', border: 'border-indigo-300',
-    ring: 'ring-indigo-400/40', text: 'text-indigo-700',
-    badge: 'bg-indigo-100 text-indigo-700',
-    iconBg: 'bg-indigo-100', iconText: 'text-indigo-600',
-  },
+  { gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', light: 'rgba(139,92,246,0.1)', color: '#8b5cf6', lightColor: '#a78bfa' },
+  { gradient: 'linear-gradient(135deg, #10b981, #14b8a6)', light: 'rgba(16,185,129,0.1)', color: '#10b981', lightColor: '#34d399' },
+  { gradient: 'linear-gradient(135deg, #f59e0b, #ea580c)', light: 'rgba(245,158,11,0.1)', color: '#f59e0b', lightColor: '#fbbf24' },
+  { gradient: 'linear-gradient(135deg, #f43f5e, #ec4899)', light: 'rgba(244,63,94,0.1)', color: '#f43f5e', lightColor: '#fb7185' },
+  { gradient: 'linear-gradient(135deg, #0ea5e9, #3b82f6)', light: 'rgba(14,165,233,0.1)', color: '#0ea5e9', lightColor: '#38bdf8' },
+  { gradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)', light: 'rgba(99,102,241,0.1)', color: '#6366f1', lightColor: '#818cf8' },
 ];
 
 /* ===================================================================
@@ -94,6 +58,12 @@ const TrashIcon = ({ className = 'w-4 h-4' }) => (
   </svg>
 );
 
+const PencilIcon = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+  </svg>
+);
+
 const InboxIcon = ({ className = 'w-12 h-12' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z" />
@@ -108,13 +78,11 @@ const formatPrice = (price) =>
 
 /* Quy cách đóng gói — labels & helpers */
 const UNIT_LABELS = { le: 'Lẻ', loc: 'Lốc', thung: 'Thùng', hop: 'Hộp' };
-const UNIT_ICONS  = { le: '🧴', loc: '📦', thung: '📦', hop: '📦' };
-const UNIT_DESCS  = { le: '1 cái / 1 gói / 1 lon', loc: 'VD: Lốc 6 lon', thung: 'VD: Thùng 24 gói', hop: 'VD: Hộp 10 bao' };
 const getUnitBadge = (p) => {
   if (!p.unit_type || p.unit_type === 'le') return null;
   const label = UNIT_LABELS[p.unit_type] || 'Lẻ';
   const qty = p.units_per_pack > 1 ? ` ${p.units_per_pack}` : '';
-  return `${UNIT_ICONS[p.unit_type]} ${label}${qty}`;
+  return `${label}${qty}`;
 };
 
 /** Kiểm tra shelf có phải ngành hàng nước ngọt không (dựa vào tên kệ) */
@@ -139,9 +107,10 @@ export default function ShelfManager() {
   const [showNewShelfForm, setShowNewShelfForm] = useState(false);
   const [creatingShelf, setCreatingShelf] = useState(false);
 
-  // -- Thêm / Xóa sản phẩm --
+  // -- Thêm / Sửa / Xóa sản phẩm --
   const [showProductModal, setShowProductModal] = useState(false);
-  const [productForm, setProductForm] = useState({ product_name: '', price: '', stock: '', unit_type: 'le', units_per_pack: '' });
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'le', units_per_pack: '' });
   const [creatingProduct, setCreatingProduct] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [deletingShelfId, setDeletingShelfId] = useState(null);
@@ -154,9 +123,7 @@ export default function ShelfManager() {
   const activeTheme = THEMES[activeThemeIndex];
 
   // ---- Fetch data ----
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -174,15 +141,8 @@ export default function ShelfManager() {
   };
 
   // ---- Handlers ----
-  const toggleShelf = (id) => {
-    setActiveShelfId((prev) => (prev === id ? null : id));
-  };
-
-  const openAddModal = () => {
-    setSelectedIds(new Set());
-    setShowAddModal(true);
-  };
-
+  const toggleShelf = (id) => setActiveShelfId((prev) => (prev === id ? null : id));
+  const openAddModal = () => { setSelectedIds(new Set()); setShowAddModal(true); };
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -190,7 +150,6 @@ export default function ShelfManager() {
       return next;
     });
   };
-
   const selectAll = () => {
     if (selectedIds.size === unassignedProducts.length) {
       setSelectedIds(new Set());
@@ -207,7 +166,6 @@ export default function ShelfManager() {
         api.put(`/products/${productId}/assign-shelf`, { shelf_id: activeShelfId })
       );
       await Promise.all(promises);
-      // Cập nhật state ngay (optimistic update)
       setAllProducts((prev) =>
         prev.map((p) => (selectedIds.has(p.id) ? { ...p, shelf_id: activeShelfId } : p))
       );
@@ -243,29 +201,57 @@ export default function ShelfManager() {
     setCreatingShelf(false);
   };
 
-  // ---- Thêm sản phẩm mới ----
   const createProduct = async () => {
-    const { product_name, price, stock, unit_type, units_per_pack } = productForm;
+    const { product_name, price, cost_price, stock, unit_type, units_per_pack } = productForm;
     if (!product_name.trim() || price === '' || Number(price) < 0) return;
     setCreatingProduct(true);
     try {
-      const res = await api.post('/products', {
+      const payload = {
         product_name: product_name.trim(),
         price: Number(price),
+        cost_price: cost_price !== '' ? Number(cost_price) : 0,
         stock: stock !== '' ? Number(stock) : 0,
         unit_type: unit_type || 'le',
         units_per_pack: unit_type !== 'le' && units_per_pack ? Number(units_per_pack) : 1,
-      });
-      setAllProducts((prev) => [...prev, res.data]);
-      setProductForm({ product_name: '', price: '', stock: '', unit_type: 'le', units_per_pack: '' });
+      };
+
+      if (editingProduct) {
+        // Edit mode
+        const res = await api.put(`/products/${editingProduct.id}`, payload);
+        setAllProducts((prev) => prev.map(p => p.id === editingProduct.id ? res.data : p));
+      } else {
+        // Create mode
+        const res = await api.post('/products', payload);
+        setAllProducts((prev) => [...prev, res.data]);
+      }
+      setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'le', units_per_pack: '' });
+      setEditingProduct(null);
       setShowProductModal(false);
     } catch (err) {
-      console.error('Lỗi thêm sản phẩm:', err);
+      console.error('Lỗi lưu sản phẩm:', err);
     }
     setCreatingProduct(false);
   };
 
-  // ---- Xóa sản phẩm ----
+  const openEditProduct = (product) => {
+    setEditingProduct(product);
+    setProductForm({
+      product_name: product.product_name,
+      price: String(product.price),
+      cost_price: product.cost_price ? String(product.cost_price) : '',
+      stock: String(product.stock),
+      unit_type: product.unit_type || 'le',
+      units_per_pack: product.units_per_pack > 1 ? String(product.units_per_pack) : '',
+    });
+    setShowProductModal(true);
+  };
+
+  const openAddProduct = () => {
+    setEditingProduct(null);
+    setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'le', units_per_pack: '' });
+    setShowProductModal(true);
+  };
+
   const deleteProduct = async (productId) => {
     setDeletingId(productId);
     try {
@@ -277,7 +263,6 @@ export default function ShelfManager() {
     setDeletingId(null);
   };
 
-  // ---- Xóa kệ hàng ----
   const deleteShelf = async (shelfId, e) => {
     e.stopPropagation();
     if (!window.confirm('Bạn có chắc muốn xóa kệ này? Sản phẩm trên kệ sẽ chuyển về trạng thái chưa xếp kệ.')) return;
@@ -299,11 +284,11 @@ export default function ShelfManager() {
       <div className="flex items-center justify-center py-32">
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 mb-4">
-            <div className="w-3 h-3 rounded-full bg-indigo-500 animate-pulse-dot" style={{ animationDelay: '0s' }} />
-            <div className="w-3 h-3 rounded-full bg-purple-500 animate-pulse-dot" style={{ animationDelay: '0.2s' }} />
-            <div className="w-3 h-3 rounded-full bg-pink-500 animate-pulse-dot" style={{ animationDelay: '0.4s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: 'var(--brand-gradient-from)', animationDelay: '0s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: 'var(--brand-gradient-to)', animationDelay: '0.2s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: '#ec4899', animationDelay: '0.4s' }} />
           </div>
-          <p className="text-gray-400 font-medium">Đang tải dữ liệu...</p>
+          <p style={{ color: 'var(--text-muted)' }} className="font-medium">Đang tải dữ liệu...</p>
         </div>
       </div>
     );
@@ -312,65 +297,61 @@ export default function ShelfManager() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* ==================== HEADER ==================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 animate-fade-in-up">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3" style={{ color: 'var(--text-primary)' }}>
+            <span className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to))', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>
               <FolderIcon className="w-5 h-5 text-white" />
             </span>
             Quản lý Kệ hàng
           </h1>
-          <p className="text-gray-500 mt-1.5 text-sm sm:text-base">
+          <p className="mt-1.5 text-sm sm:text-base" style={{ color: 'var(--text-muted)' }}>
             {shelves.length} kệ hàng • {allProducts.length} sản phẩm •{' '}
-            <span className="text-amber-600 font-medium">{unassignedProducts.length} chưa xếp kệ</span>
+            <span className="font-medium" style={{ color: 'var(--warning)' }}>{unassignedProducts.length} chưa xếp kệ</span>
           </p>
         </div>
         <div className="flex items-center gap-2.5">
           <button
-            onClick={() => setShowProductModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-lg shadow-emerald-200 hover:shadow-xl hover:shadow-emerald-300 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer"
+            onClick={openAddProduct}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm transition-all duration-200 cursor-pointer"
+            style={{ background: 'linear-gradient(135deg, var(--success), #14b8a6)', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(16,185,129,0.35)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16,185,129,0.25)'; }}
           >
-            <PlusIcon className="w-4 h-4" />
-            Thêm sản phẩm
+            <PlusIcon className="w-4 h-4" /> Thêm sản phẩm
           </button>
           <button
             onClick={() => setShowNewShelfForm(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold text-sm shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm transition-all duration-200 cursor-pointer"
+            style={{ background: 'linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to))', boxShadow: '0 4px 12px rgba(99,102,241,0.25)' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(99,102,241,0.35)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.25)'; }}
           >
-            <PlusIcon className="w-4 h-4" />
-            Thêm kệ mới
+            <PlusIcon className="w-4 h-4" /> Thêm kệ mới
           </button>
         </div>
       </div>
 
-      {/* ============ FORM TẠO KỆ MỚI (conditional) ============ */}
+      {/* ============ FORM TẠO KỆ MỚI ============ */}
       {showNewShelfForm && (
         <div className="mb-6 animate-slide-down">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-            <h3 className="font-semibold text-gray-900 mb-3">Tạo kệ hàng mới</h3>
+          <div className="card-themed p-5">
+            <h3 className="font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Tạo kệ hàng mới</h3>
             <div className="flex gap-3">
               <input
-                type="text"
-                value={newShelfName}
+                type="text" value={newShelfName}
                 onChange={(e) => setNewShelfName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && createShelf()}
                 placeholder="Nhập tên kệ (VD: Kệ Bánh Kẹo, Kệ Nước Ngọt...)"
-                autoFocus
-                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none text-sm transition-all"
+                autoFocus className="flex-1 input-themed"
               />
-              <button
-                onClick={createShelf}
-                disabled={creatingShelf || !newShelfName.trim()}
-                className="px-5 py-2.5 rounded-xl bg-indigo-500 text-white text-sm font-semibold hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-              >
+              <button onClick={createShelf} disabled={creatingShelf || !newShelfName.trim()}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
                 {creatingShelf ? 'Đang tạo...' : 'Tạo'}
               </button>
-              <button
-                onClick={() => { setShowNewShelfForm(false); setNewShelfName(''); }}
-                className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer"
-              >
-                Hủy
-              </button>
+              <button onClick={() => { setShowNewShelfForm(false); setNewShelfName(''); }}
+                className="btn-secondary">Hủy</button>
             </div>
           </div>
         </div>
@@ -379,9 +360,9 @@ export default function ShelfManager() {
       {/* ============ EMPTY STATE ============ */}
       {shelves.length === 0 && (
         <div className="text-center py-20 animate-fade-in">
-          <InboxIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-400 mb-2">Chưa có kệ hàng nào</h3>
-          <p className="text-gray-400 text-sm">Bấm "Thêm kệ mới" để bắt đầu sắp xếp sản phẩm.</p>
+          <InboxIcon className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>Chưa có kệ hàng nào</h3>
+          <p className="text-sm" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>Bấm "Thêm kệ mới" để bắt đầu sắp xếp sản phẩm.</p>
         </div>
       )}
 
@@ -391,74 +372,79 @@ export default function ShelfManager() {
           const theme = THEMES[index % THEMES.length];
           const products = getProductsOnShelf(shelf.id);
           const isActive = activeShelfId === shelf.id;
-
           return (
             <div
               key={shelf.id}
               onClick={() => toggleShelf(shelf.id)}
-              className={`
-                relative cursor-pointer rounded-2xl overflow-hidden
-                border-2 transition-all duration-300 ease-out group
-                ${isActive
-                  ? `${theme.border} ring-4 ${theme.ring} scale-[1.02] shadow-xl`
-                  : 'border-gray-100 hover:border-gray-200 hover:shadow-lg hover:-translate-y-1 shadow-sm'
-                }
-                bg-white
-              `}
+              className="relative cursor-pointer rounded-2xl overflow-hidden transition-all duration-300 ease-out group"
+              style={{
+                background: 'var(--card-bg)',
+                border: isActive ? `2px solid ${theme.color}` : '2px solid var(--card-border)',
+                boxShadow: isActive ? `0 0 0 3px ${theme.light}, var(--shadow-lg)` : 'var(--shadow-sm)',
+                transform: isActive ? 'scale(1.02)' : 'scale(1)',
+              }}
+              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--card-hover-border)'; e.currentTarget.style.boxShadow = 'var(--shadow-lg)'; e.currentTarget.style.transform = 'translateY(-4px)'; }}}
+              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.borderColor = 'var(--card-border)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.transform = 'scale(1)'; }}}
             >
               {/* Gradient top bar */}
-              <div className={`h-1.5 ${theme.gradient}`} />
+              <div className="h-1.5" style={{ background: theme.gradient }} />
 
               {/* Card body */}
               <div className="p-5">
                 <div className="flex items-center gap-3.5 mb-3">
-                  {/* Folder icon */}
-                  <div className={`w-11 h-11 rounded-xl ${theme.gradient} flex items-center justify-center shadow-md flex-shrink-0`}>
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-md flex-shrink-0"
+                       style={{ background: theme.gradient }}>
                     {isActive
-                      ? <FolderOpenIcon className="w-5.5 h-5.5 text-white" />
-                      : <FolderIcon className="w-5.5 h-5.5 text-white" />
+                      ? <FolderOpenIcon className="w-5 h-5 text-white" />
+                      : <FolderIcon className="w-5 h-5 text-white" />
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate text-[0.95rem]">
+                    <h3 className="font-semibold truncate text-[0.95rem]" style={{ color: 'var(--text-primary)' }}>
                       {shelf.shelf_name}
                     </h3>
-                    <p className="text-sm text-gray-400 mt-0.5">
+                    <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
                       {products.length} sản phẩm
                     </p>
                   </div>
-                  {/* Delete shelf button */}
+                  {/* Delete shelf */}
                   <button
                     onClick={(e) => deleteShelf(shelf.id, e)}
                     disabled={deletingShelfId === shelf.id}
                     title="Xóa kệ hàng"
-                    className="w-8 h-8 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer disabled:opacity-50 flex-shrink-0"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer disabled:opacity-50 flex-shrink-0"
+                    style={{ color: 'var(--danger)', border: '1px solid transparent' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.borderColor = 'var(--danger-light)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                   >
                     {deletingShelfId === shelf.id
-                      ? <span className="w-3.5 h-3.5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
-                      : <TrashIcon className="w-4 h-4 text-red-400" />
+                      ? <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--danger-light)', borderTopColor: 'var(--danger)' }} />
+                      : <TrashIcon className="w-4 h-4" />
                     }
                   </button>
                   {/* Expand indicator */}
                   <ChevronIcon
-                    className={`w-5 h-5 text-gray-300 group-hover:text-gray-500 transition-all duration-300 flex-shrink-0 ${isActive ? 'rotate-180 text-gray-500' : ''}`}
+                    className="w-5 h-5 transition-all duration-300 flex-shrink-0"
+                    style={{
+                      color: isActive ? 'var(--text-tertiary)' : 'var(--text-muted)',
+                      transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)',
+                    }}
                   />
                 </div>
 
-                {/* Preview badges: hiển thị 3 sản phẩm đầu tiên */}
+                {/* Preview badges */}
                 {products.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1">
                     {products.slice(0, 3).map((p) => (
-                      <span
-                        key={p.id}
-                        className={`text-xs px-2.5 py-1 rounded-lg ${theme.badge} font-medium truncate max-w-[160px]`}
-                      >
+                      <span key={p.id} className="text-xs px-2.5 py-1 rounded-lg font-medium truncate max-w-[160px]"
+                            style={{ background: theme.light, color: theme.color }}>
                         {p.product_name}
-                        {getUnitBadge(p) && <span className="ml-1 opacity-70">{getUnitBadge(p)}</span>}
+                        {getUnitBadge(p) && <span style={{ opacity: 0.7 }} className="ml-1">{getUnitBadge(p)}</span>}
                       </span>
                     ))}
                     {products.length > 3 && (
-                      <span className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-500 font-medium">
+                      <span className="text-xs px-2 py-1 rounded-lg font-medium"
+                            style={{ background: 'var(--bg-inset)', color: 'var(--text-muted)' }}>
                         +{products.length - 3}
                       </span>
                     )}
@@ -466,7 +452,7 @@ export default function ShelfManager() {
                 )}
 
                 {products.length === 0 && (
-                  <p className="text-xs text-gray-300 italic">Chưa có sản phẩm</p>
+                  <p className="text-xs italic" style={{ color: 'var(--text-muted)', opacity: 0.5 }}>Chưa có sản phẩm</p>
                 )}
               </div>
             </div>
@@ -478,33 +464,39 @@ export default function ShelfManager() {
       {unassignedProducts.length > 0 && (
         <div className="mt-8 animate-fade-in">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md"
+                 style={{ background: 'linear-gradient(135deg, var(--warning), #ea580c)' }}>
               <PackageIcon className="w-4 h-4 text-white" />
             </div>
-            <h2 className="text-lg font-bold text-gray-900">Sản phẩm chưa xếp kệ</h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
+            <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Sản phẩm chưa xếp kệ</h2>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold"
+                  style={{ background: 'var(--warning-bg)', color: 'var(--warning)' }}>
               {unassignedProducts.length}
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {unassignedProducts.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group/unassigned"
+              <div key={product.id}
+                className="flex items-center gap-3 p-4 rounded-xl transition-all group/unassigned"
+                style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.borderColor = 'var(--card-hover-border)'; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
               >
-                <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-                  <PackageIcon className="w-4.5 h-4.5 text-amber-500" />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                     style={{ background: 'var(--warning-bg)' }}>
+                  <PackageIcon className="w-4 h-4" style={{ color: 'var(--warning)' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 text-sm truncate">
+                  <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                     {product.product_name}
                     {getUnitBadge(product) && (
-                      <span className="ml-1.5 inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100">
+                      <span className="ml-1.5 inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                            style={{ background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid var(--info-light)' }}>
                         {getUnitBadge(product)}
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     {formatPrice(product.price)} • Tồn: {product.stock}
                   </p>
                 </div>
@@ -512,11 +504,14 @@ export default function ShelfManager() {
                   onClick={() => deleteProduct(product.id)}
                   disabled={deletingId === product.id}
                   title="Xóa sản phẩm"
-                  className="w-8 h-8 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 flex items-center justify-center opacity-0 group-hover/unassigned:opacity-100 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover/unassigned:opacity-100 transition-all cursor-pointer disabled:opacity-50"
+                  style={{ color: 'var(--danger)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   {deletingId === product.id
-                    ? <span className="w-3.5 h-3.5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
-                    : <TrashIcon className="w-4 h-4 text-red-400" />
+                    ? <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--danger-light)', borderTopColor: 'var(--danger)' }} />
+                    : <TrashIcon className="w-4 h-4" />
                   }
                 </button>
               </div>
@@ -528,9 +523,11 @@ export default function ShelfManager() {
       {/* ==================== EXPANDED SHELF PANEL ==================== */}
       {activeShelf && (
         <div className="mt-6 animate-shelf-open">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
+          <div className="rounded-2xl overflow-hidden"
+               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-xl)' }}>
             {/* Panel header */}
-            <div className={`px-6 py-4 ${activeTheme.gradient} flex items-center justify-between`}>
+            <div className="px-6 py-4 flex items-center justify-between"
+                 style={{ background: activeTheme.gradient }}>
               <div className="flex items-center gap-3 text-white">
                 <FolderOpenIcon className="w-6 h-6" />
                 <h2 className="text-lg font-bold">{activeShelf.shelf_name}</h2>
@@ -543,8 +540,7 @@ export default function ShelfManager() {
                   onClick={(e) => { e.stopPropagation(); openAddModal(); }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/20 backdrop-blur-sm text-white text-sm font-semibold hover:bg-white/30 transition-colors cursor-pointer"
                 >
-                  <PlusIcon className="w-4 h-4" />
-                  Thêm SP vào kệ
+                  <PlusIcon className="w-4 h-4" /> Thêm SP vào kệ
                 </button>
                 <button
                   onClick={() => setActiveShelfId(null)}
@@ -558,11 +554,10 @@ export default function ShelfManager() {
             {/* Product list */}
             <div className="p-5">
               {getProductsOnShelf(activeShelfId).length === 0 ? (
-                /* Empty shelf */
                 <div className="text-center py-12">
-                  <PackageIcon className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                  <p className="text-gray-400 font-medium mb-1">Kệ hàng trống</p>
-                  <p className="text-sm text-gray-300">
+                  <PackageIcon className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
+                  <p className="font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Kệ hàng trống</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
                     Bấm "Thêm SP vào kệ" để đưa sản phẩm lên kệ này.
                   </p>
                 </div>
@@ -571,48 +566,59 @@ export default function ShelfManager() {
                   {getProductsOnShelf(activeShelfId).map((product, i) => (
                     <div
                       key={product.id}
-                      className="flex items-center gap-4 p-4 rounded-xl bg-gray-50/80 hover:bg-gray-100/80 transition-colors group/item animate-fade-in"
-                      style={{ animationDelay: `${i * 0.04}s` }}
+                      className="flex items-center gap-4 p-4 rounded-xl transition-colors group/item animate-fade-in"
+                      style={{ background: 'var(--bg-inset)', animationDelay: `${i * 0.04}s` }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface-hover)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-inset)'}
                     >
-                      {/* Icon */}
-                      <div className={`w-10 h-10 rounded-xl ${activeTheme.iconBg} flex items-center justify-center flex-shrink-0`}>
-                        <PackageIcon className={`w-5 h-5 ${activeTheme.iconText}`} />
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                           style={{ background: activeTheme.light }}>
+                        <PackageIcon className="w-5 h-5" style={{ color: activeTheme.color }} />
                       </div>
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
+                        <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                           {product.product_name}
                           {getUnitBadge(product) && (
-                            <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100">
+                            <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md"
+                                  style={{ background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid var(--info-light)' }}>
                               {getUnitBadge(product)}
                             </span>
                           )}
                         </p>
-                        <p className="text-sm text-gray-400 mt-0.5">{formatPrice(product.price)}</p>
+                        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{formatPrice(product.price)}</p>
                       </div>
-                      {/* Stock */}
                       <div className="text-right flex-shrink-0 hidden sm:block">
-                        <p className="text-xs text-gray-400">Tồn kho</p>
-                        <p className="font-semibold text-gray-700">{product.stock}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Tồn kho</p>
+                        <p className="font-semibold" style={{ color: 'var(--text-secondary)' }}>{product.stock}</p>
                       </div>
-                      {/* Remove from shelf */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEditProduct(product); }}
+                        title="Sửa sản phẩm"
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium opacity-0 group-hover/item:opacity-100 transition-all cursor-pointer flex-shrink-0 flex items-center gap-1"
+                        style={{ color: 'var(--brand-primary)', background: 'var(--brand-light)', border: '1px solid var(--brand-lighter)' }}
+                      >
+                        <PencilIcon className="w-3 h-3" /> Sửa
+                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); removeFromShelf(product.id); }}
                         title="Gỡ khỏi kệ"
-                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 hover:bg-amber-100 opacity-0 group-hover/item:opacity-100 transition-all cursor-pointer flex-shrink-0"
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium opacity-0 group-hover/item:opacity-100 transition-all cursor-pointer flex-shrink-0"
+                        style={{ color: 'var(--warning)', background: 'var(--warning-bg)', border: '1px solid var(--warning-light)' }}
                       >
                         Gỡ kệ
                       </button>
-                      {/* Delete product */}
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteProduct(product.id); }}
                         disabled={deletingId === product.id}
                         title="Xóa sản phẩm"
-                        className="w-9 h-9 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all cursor-pointer disabled:opacity-50 flex-shrink-0"
+                        className="w-9 h-9 rounded-lg flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all cursor-pointer disabled:opacity-50 flex-shrink-0"
+                        style={{ color: 'var(--danger)' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
                       >
                         {deletingId === product.id
-                          ? <span className="w-3.5 h-3.5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
-                          : <TrashIcon className="w-4 h-4 text-red-400" />
+                          ? <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--danger-light)', borderTopColor: 'var(--danger)' }} />
+                          : <TrashIcon className="w-4 h-4" />
                         }
                       </button>
                     </div>
@@ -626,82 +632,59 @@ export default function ShelfManager() {
 
       {/* ==================== ADD PRODUCTS MODAL ==================== */}
       {showAddModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setShowAddModal(false)}
-        >
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-
-          {/* Modal */}
-          <div
-            className="relative bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-modal-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div className="px-6 py-5 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">
-                Thêm sản phẩm vào kệ
-              </h3>
-              <p className="text-sm text-gray-400 mt-1">
-                Kệ: <span className={`font-semibold ${activeTheme.text}`}>{activeShelf?.shelf_name}</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowAddModal(false)}>
+          <div className="absolute inset-0 modal-overlay" />
+          <div className="relative rounded-2xl w-full max-w-lg overflow-hidden animate-modal-in"
+               style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
+               onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5" style={{ borderBottom: '1px solid var(--border-primary)' }}>
+              <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Thêm sản phẩm vào kệ</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                Kệ: <span className="font-semibold" style={{ color: activeTheme.color }}>{activeShelf?.shelf_name}</span>
                 {' • '}{unassignedProducts.length} sản phẩm chưa xếp kệ
               </p>
             </div>
 
-            {/* Select all */}
             {unassignedProducts.length > 0 && (
-              <div className="px-6 py-3 border-b border-gray-50 bg-gray-50/60">
+              <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--border-secondary)', background: 'var(--bg-inset)' }}>
                 <label className="flex items-center gap-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    className="checkbox-custom"
-                    checked={selectedIds.size === unassignedProducts.length}
-                    onChange={selectAll}
-                  />
-                  <span className="font-medium text-sm text-gray-600">
+                  <input type="checkbox" className="checkbox-custom"
+                    checked={selectedIds.size === unassignedProducts.length} onChange={selectAll} />
+                  <span className="font-medium text-sm" style={{ color: 'var(--text-secondary)' }}>
                     Chọn tất cả ({unassignedProducts.length})
                   </span>
                 </label>
               </div>
             )}
 
-            {/* Product list */}
             <div className="overflow-y-auto max-h-[380px] custom-scrollbar">
               {unassignedProducts.length === 0 ? (
                 <div className="text-center py-14 px-6">
-                  <PackageIcon className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                  <p className="text-gray-400 font-medium">Không có sản phẩm nào chưa xếp kệ</p>
-                  <p className="text-sm text-gray-300 mt-1">Tất cả sản phẩm đều đã được gán vào kệ.</p>
+                  <PackageIcon className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
+                  <p className="font-medium" style={{ color: 'var(--text-muted)' }}>Không có sản phẩm nào chưa xếp kệ</p>
+                  <p className="text-sm mt-1" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>Tất cả sản phẩm đều đã được gán vào kệ.</p>
                 </div>
               ) : (
                 <div className="p-3 space-y-1">
                   {unassignedProducts.map((product) => {
                     const isChecked = selectedIds.has(product.id);
                     return (
-                      <label
-                        key={product.id}
-                        className={`
-                          flex items-center gap-4 p-3.5 rounded-xl cursor-pointer
-                          transition-all duration-150 select-none
-                          ${isChecked
-                            ? 'bg-indigo-50/80 ring-1 ring-indigo-200'
-                            : 'hover:bg-gray-50'
-                          }
-                        `}
+                      <label key={product.id}
+                        className="flex items-center gap-4 p-3.5 rounded-xl cursor-pointer transition-all duration-150 select-none"
+                        style={{
+                          background: isChecked ? 'var(--brand-light)' : 'transparent',
+                          boxShadow: isChecked ? `inset 0 0 0 1px var(--brand-primary)` : 'none',
+                        }}
+                        onMouseEnter={e => { if (!isChecked) e.currentTarget.style.background = 'var(--bg-inset)'; }}
+                        onMouseLeave={e => { if (!isChecked) e.currentTarget.style.background = 'transparent'; }}
                       >
-                        <input
-                          type="checkbox"
-                          className="checkbox-custom"
-                          checked={isChecked}
-                          onChange={() => toggleSelect(product.id)}
-                        />
-                        <PackageIcon className={`w-5 h-5 flex-shrink-0 ${isChecked ? 'text-indigo-500' : 'text-gray-300'}`} />
+                        <input type="checkbox" className="checkbox-custom" checked={isChecked} onChange={() => toggleSelect(product.id)} />
+                        <PackageIcon className="w-5 h-5 flex-shrink-0" style={{ color: isChecked ? 'var(--brand-primary)' : 'var(--text-muted)' }} />
                         <div className="flex-1 min-w-0">
-                          <p className={`font-medium truncate ${isChecked ? 'text-indigo-900' : 'text-gray-700'}`}>
+                          <p className="font-medium truncate" style={{ color: isChecked ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                             {product.product_name}
                           </p>
-                          <p className="text-sm text-gray-400 mt-0.5">
+                          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
                             {formatPrice(product.price)} • Tồn: {product.stock}
                           </p>
                         </div>
@@ -712,31 +695,21 @@ export default function ShelfManager() {
               )}
             </div>
 
-            {/* Modal footer */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/40 flex items-center justify-between gap-3">
-              <p className="text-sm text-gray-400">
-                Đã chọn: <span className="font-bold text-indigo-600">{selectedIds.size}</span>
+            <div className="px-6 py-4 flex items-center justify-between gap-3"
+                 style={{ borderTop: '1px solid var(--border-primary)', background: 'var(--bg-inset)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                Đã chọn: <span className="font-bold" style={{ color: 'var(--brand-primary)' }}>{selectedIds.size}</span>
               </p>
               <div className="flex items-center gap-2.5">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={assignProducts}
-                  disabled={selectedIds.size === 0 || saving}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
-                >
+                <button onClick={() => setShowAddModal(false)} className="btn-secondary">Hủy</button>
+                <button onClick={assignProducts} disabled={selectedIds.size === 0 || saving}
+                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
                   {saving ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Đang lưu...
                     </span>
-                  ) : (
-                    `Xác nhận (${selectedIds.size})`
-                  )}
+                  ) : `Xác nhận (${selectedIds.size})`}
                 </button>
               </div>
             </div>
@@ -746,119 +719,90 @@ export default function ShelfManager() {
 
       {/* ==================== MODAL THÊM SẢN PHẨM MỚI ==================== */}
       {showProductModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setShowProductModal(false)}
-        >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div
-            className="relative bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-modal-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="px-6 py-5 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowProductModal(false)}>
+          <div className="absolute inset-0 modal-overlay" />
+          <div className="relative rounded-2xl w-full max-w-md overflow-hidden animate-modal-in"
+               style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
+               onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5" style={{ borderBottom: '1px solid var(--border-primary)' }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
+                     style={{ background: 'linear-gradient(135deg, var(--success), #14b8a6)' }}>
                   <PackageIcon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Thêm sản phẩm mới</h3>
-                  <p className="text-sm text-gray-400">Nhập thông tin sản phẩm bên dưới</p>
+                  <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{editingProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h3>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{editingProduct ? `Đang sửa: ${editingProduct.product_name}` : 'Nhập thông tin sản phẩm bên dưới'}</p>
                 </div>
               </div>
             </div>
 
-            {/* Form */}
             <div className="p-6 space-y-4">
-              {/* Tên sản phẩm */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Tên sản phẩm <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  Tên sản phẩm <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
-                <input
-                  type="text"
-                  value={productForm.product_name}
+                <input type="text" value={productForm.product_name}
                   onChange={(e) => setProductForm({ ...productForm, product_name: e.target.value })}
-                  placeholder="VD: Mì Hảo Hảo, Coca Cola..."
-                  autoFocus
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none text-sm transition-all"
-                />
+                  placeholder="VD: Mì Hảo Hảo, Coca Cola..." autoFocus className="w-full input-themed" />
               </div>
 
-              {/* Giá + Tồn kho */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Giá bán (₫) <span className="text-red-400">*</span>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Giá bán (₫) <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="500"
-                    value={productForm.price}
+                  <input type="number" min="0" step="500" value={productForm.price}
                     onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                    placeholder="0"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none text-sm transition-all"
-                  />
+                    placeholder="0" className="w-full input-themed" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Tồn kho
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={productForm.stock}
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Giá vốn (₫)</label>
+                  <input type="number" min="0" step="500" value={productForm.cost_price}
+                    onChange={(e) => setProductForm({ ...productForm, cost_price: e.target.value })}
+                    placeholder="0" className="w-full input-themed" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Tồn kho</label>
+                  <input type="number" min="0" value={productForm.stock}
                     onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-                    placeholder="0"
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none text-sm transition-all"
-                  />
+                    placeholder="0" className="w-full input-themed" />
                 </div>
               </div>
 
-              {/* ===== Quy cách đóng gói ===== */}
+              {/* Quy cách đóng gói */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Quy cách đóng gói
-                </label>
-                <select
-                  value={productForm.unit_type}
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Quy cách đóng gói</label>
+                <select value={productForm.unit_type}
                   onChange={(e) => {
                     const val = e.target.value;
                     setProductForm({
-                      ...productForm,
-                      unit_type: val,
+                      ...productForm, unit_type: val,
                       units_per_pack: val === 'le' ? '' : (productForm.units_per_pack || (val === 'loc' ? '6' : val === 'hop' ? '10' : '24')),
                     });
                   }}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none text-sm transition-all bg-white cursor-pointer appearance-none"
-                  style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', backgroundSize: '20px', paddingRight: '40px' }}
+                  className="w-full input-themed cursor-pointer"
                 >
-                  <option value="le">🧴 Lẻ — 1 cái / 1 gói / 1 lon</option>
+                  <option value="le">Lẻ — 1 cái / 1 gói / 1 lon</option>
                   {activeShelf && isSoftDrinkShelf(activeShelf.shelf_name) && (
-                    <option value="loc">📦 Lốc — VD: Lốc 6 lon (chỉ Nước ngọt)</option>
+                    <option value="loc">Lốc — VD: Lốc 6 lon (chỉ Nước ngọt)</option>
                   )}
-                  <option value="thung">📦 Thùng — VD: Thùng 24 gói</option>
-                  <option value="hop">📦 Hộp — VD: Hộp 10 bao (thuốc lá...)</option>
+                  <option value="thung">Thùng — VD: Thùng 24 gói</option>
+                  <option value="hop">Hộp — VD: Hộp 10 bao (thuốc lá...)</option>
                 </select>
 
-                {/* Input số lượng lẻ trong gói — chỉ hiện khi KHÔNG phải Lẻ */}
                 {productForm.unit_type !== 'le' && (
                   <div className="mt-3 animate-fade-in">
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                       Số lượng lẻ trong 1 {UNIT_LABELS[productForm.unit_type].toLowerCase()}
-                      <span className="text-red-400"> *</span>
+                      <span style={{ color: 'var(--danger)' }}> *</span>
                     </label>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        value={productForm.units_per_pack}
+                      <input type="number" min="1" value={productForm.units_per_pack}
                         onChange={(e) => setProductForm({ ...productForm, units_per_pack: e.target.value })}
                         placeholder={productForm.unit_type === 'loc' ? '6' : productForm.unit_type === 'hop' ? '10' : '24'}
-                        className="w-28 px-4 py-2.5 rounded-xl border border-gray-200 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none text-sm transition-all"
-                      />
-                      <span className="text-sm text-gray-400">
+                        className="w-28 input-themed" />
+                      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                         đơn vị lẻ / {UNIT_LABELS[productForm.unit_type].toLowerCase()}
                       </span>
                     </div>
@@ -868,12 +812,13 @@ export default function ShelfManager() {
 
               {/* Preview giá */}
               {productForm.price && Number(productForm.price) > 0 && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-100 animate-fade-in">
-                  <span className="text-sm text-emerald-600">Giá hiển thị:</span>
-                  <span className="font-bold text-emerald-700">
+                <div className="flex items-center gap-2 p-3 rounded-xl animate-fade-in"
+                     style={{ background: 'var(--success-bg)', border: '1px solid var(--success-light)' }}>
+                  <span className="text-sm" style={{ color: 'var(--success)' }}>Giá hiển thị:</span>
+                  <span className="font-bold" style={{ color: 'var(--success)' }}>
                     {formatPrice(Number(productForm.price))}
                     {productForm.unit_type !== 'le' && (
-                      <span className="font-normal text-emerald-500 ml-1">
+                      <span className="font-normal ml-1" style={{ opacity: 0.7 }}>
                         / {UNIT_LABELS[productForm.unit_type].toLowerCase()}
                         {productForm.units_per_pack ? ` ${productForm.units_per_pack}` : ''}
                       </span>
@@ -883,27 +828,21 @@ export default function ShelfManager() {
               )}
             </div>
 
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/40 flex items-center justify-end gap-2.5">
+            <div className="px-6 py-4 flex items-center justify-end gap-2.5"
+                 style={{ borderTop: '1px solid var(--border-primary)', background: 'var(--bg-inset)' }}>
               <button
-                onClick={() => { setShowProductModal(false); setProductForm({ product_name: '', price: '', stock: '', unit_type: 'le', units_per_pack: '' }); }}
-                className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition-colors cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={createProduct}
+                onClick={() => { setShowProductModal(false); setEditingProduct(null); setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'le', units_per_pack: '' }); }}
+                className="btn-secondary">Hủy</button>
+              <button onClick={createProduct}
                 disabled={creatingProduct || !productForm.product_name.trim() || productForm.price === '' || Number(productForm.price) < 0}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-sm font-semibold shadow-md shadow-emerald-200 hover:shadow-lg hover:shadow-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
-              >
+                className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: 'linear-gradient(135deg, var(--success), #14b8a6)', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}>
                 {creatingProduct ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Đang thêm...
+                    {editingProduct ? 'Đang lưu...' : 'Đang thêm...'}
                   </span>
-                ) : (
-                  'Thêm sản phẩm'
-                )}
+                ) : (editingProduct ? 'Lưu thay đổi' : 'Thêm sản phẩm')}
               </button>
             </div>
           </div>

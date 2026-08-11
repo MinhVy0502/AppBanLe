@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 
 /* ===================================================================
-   ICONS
+   SVG ICONS
    =================================================================== */
 const AlertIcon = ({ className = 'w-5 h-5' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -52,6 +52,12 @@ const ArchiveIcon = ({ className = 'w-5 h-5' }) => (
   </svg>
 );
 
+const CheckIcon = ({ className = 'w-5 h-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
 /* ===================================================================
    HELPERS
    =================================================================== */
@@ -75,11 +81,25 @@ const getDaysLabel = (days) => {
   return `Còn ${days} ngày`;
 };
 
-const getDaysBadge = (days) => {
-  if (days < 0) return 'bg-red-100 text-red-700 border-red-200';
-  if (days <= 7) return 'bg-orange-100 text-orange-700 border-orange-200';
-  if (days <= 30) return 'bg-amber-100 text-amber-700 border-amber-200';
-  return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+const getDaysBadgeStyle = (days) => {
+  if (days < 0) return { background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger-light)' };
+  if (days <= 7) return { background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-light)' };
+  if (days <= 30) return { background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-light)' };
+  return { background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-light)' };
+};
+
+const getDaysIconBg = (days) => {
+  if (days < 0) return 'var(--danger-bg)';
+  if (days <= 7) return 'var(--warning-bg)';
+  if (days <= 30) return 'var(--warning-bg)';
+  return 'var(--success-bg)';
+};
+
+const getDaysIconColor = (days) => {
+  if (days < 0) return 'var(--danger)';
+  if (days <= 7) return 'var(--warning)';
+  if (days <= 30) return 'var(--warning)';
+  return 'var(--success)';
 };
 
 /* ===================================================================
@@ -136,7 +156,6 @@ export default function Inventory() {
       setBatches((prev) => [...prev, res.data]);
       setBatchForm({ product_id: '', batch_code: '', manufacturing_date: '', expiry_date: '', quantity: '' });
       setShowBatchModal(false);
-      // Refresh alerts
       const alertRes = await api.get('/batches/alerts');
       setAlerts(alertRes.data);
     } catch (err) {
@@ -174,11 +193,11 @@ export default function Inventory() {
       <div className="flex items-center justify-center py-32">
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 mb-4">
-            <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse-dot" style={{ animationDelay: '0s' }} />
-            <div className="w-3 h-3 rounded-full bg-orange-500 animate-pulse-dot" style={{ animationDelay: '0.2s' }} />
-            <div className="w-3 h-3 rounded-full bg-amber-500 animate-pulse-dot" style={{ animationDelay: '0.4s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: 'var(--danger)', animationDelay: '0s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: 'var(--warning)', animationDelay: '0.2s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: '#f59e0b', animationDelay: '0.4s' }} />
           </div>
-          <p className="text-gray-400 font-medium">Đang tải dữ liệu...</p>
+          <p style={{ color: 'var(--text-muted)' }} className="font-medium">Đang tải dữ liệu...</p>
         </div>
       </div>
     );
@@ -190,37 +209,47 @@ export default function Inventory() {
     return (
       <div
         key={batch.id}
-        className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all group/alert animate-fade-in"
+        className="flex items-center gap-3 p-3.5 rounded-xl transition-all group/alert animate-fade-in"
+        style={{
+          background: 'var(--card-bg)',
+          border: '1px solid var(--card-border)',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.borderColor = 'var(--card-hover-border)'; }}
+        onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
       >
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-          type === 'expired' ? 'bg-red-100' : type === 'soon' ? 'bg-orange-100' : 'bg-amber-100'
-        }`}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+             style={{ background: getDaysIconBg(days) }}>
           {type === 'expired'
-            ? <AlertIcon className={`w-4.5 h-4.5 text-red-500`} />
-            : <ClockIcon className={`w-4.5 h-4.5 ${type === 'soon' ? 'text-orange-500' : 'text-amber-500'}`} />
+            ? <AlertIcon className="w-4 h-4" style={{ color: getDaysIconColor(days) }} />
+            : <ClockIcon className="w-4 h-4" style={{ color: getDaysIconColor(days) }} />
           }
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-gray-900 text-sm truncate">
+          <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>
             {batch.product?.product_name || 'Sản phẩm'}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
             {batch.batch_code ? `Lô: ${batch.batch_code} • ` : ''}
             HSD: {formatDate(batch.expiry_date)} • SL: {batch.quantity}
           </p>
         </div>
-        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border flex-shrink-0 ${getDaysBadge(days)}`}>
+        <span className="px-2.5 py-1 rounded-lg text-xs font-bold flex-shrink-0"
+              style={getDaysBadgeStyle(days)}>
           {getDaysLabel(days)}
         </span>
         <button
           onClick={() => deleteBatch(batch.id)}
           disabled={deletingBatchId === batch.id}
           title="Xóa lô"
-          className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center opacity-0 group-hover/alert:opacity-100 transition-all cursor-pointer flex-shrink-0"
+          className="w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover/alert:opacity-100 transition-all cursor-pointer flex-shrink-0"
+          style={{ color: 'var(--danger)' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
           {deletingBatchId === batch.id
-            ? <span className="w-3 h-3 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
-            : <TrashIcon className="w-3.5 h-3.5 text-red-400" />
+            ? <span className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--danger-light)', borderTopColor: 'var(--danger)' }} />
+            : <TrashIcon className="w-3.5 h-3.5" />
           }
         </button>
       </div>
@@ -230,18 +259,31 @@ export default function Inventory() {
   const renderLowStockItem = (product) => (
     <div
       key={product.id}
-      className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all animate-fade-in"
+      className="flex items-center gap-3 p-3.5 rounded-xl transition-all animate-fade-in"
+      style={{
+        background: 'var(--card-bg)',
+        border: '1px solid var(--card-border)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
     >
-      <div className="w-9 h-9 rounded-lg bg-sky-100 flex items-center justify-center flex-shrink-0">
-        <PackageIcon className="w-4.5 h-4.5 text-sky-500" />
+      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+           style={{ background: 'var(--info-bg)' }}>
+        <PackageIcon className="w-4 h-4" style={{ color: 'var(--info)' }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-900 text-sm truncate">{product.product_name}</p>
-        <p className="text-xs text-gray-400 mt-0.5">Giá: {new Intl.NumberFormat('vi-VN').format(product.price)} ₫</p>
+        <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{product.product_name}</p>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+          Giá: {new Intl.NumberFormat('vi-VN').format(product.price)} ₫
+        </p>
       </div>
-      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border flex-shrink-0 ${
-        product.stock === 0 ? 'bg-red-100 text-red-700 border-red-200' : 'bg-sky-100 text-sky-700 border-sky-200'
-      }`}>
+      <span className="px-2.5 py-1 rounded-lg text-xs font-bold flex-shrink-0"
+            style={{
+              background: product.stock === 0 ? 'var(--danger-bg)' : 'var(--info-bg)',
+              color: product.stock === 0 ? 'var(--danger)' : 'var(--info)',
+              border: product.stock === 0 ? '1px solid var(--danger-light)' : '1px solid var(--info-light)',
+            }}>
         {product.stock === 0 ? 'Hết hàng' : `Còn ${product.stock}`}
       </span>
     </div>
@@ -250,18 +292,22 @@ export default function Inventory() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* ==================== HEADER ==================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 animate-fade-in-up">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg shadow-red-200">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+               style={{
+                 background: 'linear-gradient(135deg, var(--danger), var(--warning))',
+                 boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+               }}>
             <ArchiveIcon className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Lô hàng & Cảnh báo</h1>
-            <p className="text-sm text-gray-400">
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Lô hàng & Cảnh báo</h1>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               {batches.length} lô hàng •
               {alertCounts.total > 0
-                ? <span className="text-red-500 font-medium ml-1">{alertCounts.total} cảnh báo</span>
-                : <span className="text-emerald-500 font-medium ml-1">Không có cảnh báo</span>
+                ? <span className="font-medium ml-1" style={{ color: 'var(--danger)' }}>{alertCounts.total} cảnh báo</span>
+                : <span className="font-medium ml-1" style={{ color: 'var(--success)' }}>Không có cảnh báo</span>
               }
             </p>
           </div>
@@ -269,26 +315,33 @@ export default function Inventory() {
 
         <div className="flex items-center gap-2.5">
           {/* Section toggle */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+          <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'var(--bg-inset)' }}>
             <button
               onClick={() => setActiveSection('alerts')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                activeSection === 'alerts' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer"
+              style={{
+                background: activeSection === 'alerts' ? 'var(--bg-surface)' : 'transparent',
+                color: activeSection === 'alerts' ? 'var(--text-primary)' : 'var(--text-muted)',
+                boxShadow: activeSection === 'alerts' ? 'var(--shadow-sm)' : 'none',
+              }}
             >
               <AlertIcon className="w-4 h-4" />
               <span>Cảnh báo</span>
               {alertCounts.total > 0 && (
-                <span className="ml-0.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold">
+                <span className="ml-0.5 w-5 h-5 rounded-full text-white text-xs flex items-center justify-center font-bold"
+                      style={{ background: 'var(--danger)' }}>
                   {alertCounts.total}
                 </span>
               )}
             </button>
             <button
               onClick={() => setActiveSection('batches')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-                activeSection === 'batches' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer"
+              style={{
+                background: activeSection === 'batches' ? 'var(--bg-surface)' : 'transparent',
+                color: activeSection === 'batches' ? 'var(--text-primary)' : 'var(--text-muted)',
+                boxShadow: activeSection === 'batches' ? 'var(--shadow-sm)' : 'none',
+              }}
             >
               <CalendarIcon className="w-4 h-4" />
               <span>Lô hàng</span>
@@ -297,7 +350,13 @@ export default function Inventory() {
 
           <button
             onClick={() => setShowBatchModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-orange-600 text-white font-semibold text-sm shadow-lg shadow-red-200 hover:shadow-xl hover:shadow-red-300 hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm transition-all cursor-pointer"
+            style={{
+              background: 'linear-gradient(135deg, var(--danger), var(--warning))',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.25)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.35)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.25)'; }}
           >
             <PlusIcon className="w-4 h-4" />
             Thêm lô
@@ -310,11 +369,12 @@ export default function Inventory() {
         <div className="space-y-6 animate-fade-in">
           {alertCounts.total === 0 ? (
             <div className="text-center py-20">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">✅</span>
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                   style={{ background: 'var(--success-bg)' }}>
+                <CheckIcon className="w-8 h-8" style={{ color: 'var(--success)' }} />
               </div>
-              <h3 className="text-lg font-semibold text-gray-500 mb-1">Không có cảnh báo nào</h3>
-              <p className="text-sm text-gray-400">Tất cả sản phẩm và lô hàng đều trong trạng thái tốt.</p>
+              <h3 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-tertiary)' }}>Không có cảnh báo nào</h3>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Tất cả sản phẩm và lô hàng đều trong trạng thái tốt.</p>
             </div>
           ) : (
             <>
@@ -322,8 +382,8 @@ export default function Inventory() {
               {alerts.expired?.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <h2 className="font-bold text-red-600 text-sm uppercase tracking-wide">
+                    <div className="w-2 h-2 rounded-full" style={{ background: 'var(--danger)' }} />
+                    <h2 className="font-bold text-sm uppercase tracking-wide" style={{ color: 'var(--danger)' }}>
                       Đã hết hạn ({alerts.expired.length})
                     </h2>
                   </div>
@@ -337,8 +397,8 @@ export default function Inventory() {
               {alerts.expiringSoon?.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 rounded-full bg-orange-500" />
-                    <h2 className="font-bold text-orange-600 text-sm uppercase tracking-wide">
+                    <div className="w-2 h-2 rounded-full" style={{ background: 'var(--warning)' }} />
+                    <h2 className="font-bold text-sm uppercase tracking-wide" style={{ color: 'var(--warning)' }}>
                       Sắp hết hạn — 7 ngày ({alerts.expiringSoon.length})
                     </h2>
                   </div>
@@ -352,8 +412,8 @@ export default function Inventory() {
               {alerts.expiringMonth?.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <h2 className="font-bold text-amber-600 text-sm uppercase tracking-wide">
+                    <div className="w-2 h-2 rounded-full" style={{ background: '#f59e0b' }} />
+                    <h2 className="font-bold text-sm uppercase tracking-wide" style={{ color: '#f59e0b' }}>
                       Cần lưu ý — 30 ngày ({alerts.expiringMonth.length})
                     </h2>
                   </div>
@@ -367,8 +427,8 @@ export default function Inventory() {
               {alerts.lowStock?.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-2 h-2 rounded-full bg-sky-500" />
-                    <h2 className="font-bold text-sky-600 text-sm uppercase tracking-wide">
+                    <div className="w-2 h-2 rounded-full" style={{ background: 'var(--info)' }} />
+                    <h2 className="font-bold text-sm uppercase tracking-wide" style={{ color: 'var(--info)' }}>
                       Tồn kho thấp ≤ 5 ({alerts.lowStock.length})
                     </h2>
                   </div>
@@ -387,9 +447,9 @@ export default function Inventory() {
         <div className="animate-fade-in">
           {batches.length === 0 ? (
             <div className="text-center py-20">
-              <CalendarIcon className="w-14 h-14 text-gray-200 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-400 mb-1">Chưa có lô hàng nào</h3>
-              <p className="text-sm text-gray-300">Bấm "Thêm lô" để theo dõi hạn sử dụng sản phẩm.</p>
+              <CalendarIcon className="w-14 h-14 mx-auto mb-4" style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
+              <h3 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Chưa có lô hàng nào</h3>
+              <p className="text-sm" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>Bấm "Thêm lô" để theo dõi hạn sử dụng sản phẩm.</p>
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -398,23 +458,27 @@ export default function Inventory() {
                 return (
                   <div
                     key={batch.id}
-                    className="flex items-center gap-4 p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all group/batch"
+                    className="flex items-center gap-4 p-4 rounded-xl transition-all group/batch"
+                    style={{
+                      background: 'var(--card-bg)',
+                      border: '1px solid var(--card-border)',
+                      boxShadow: 'var(--shadow-sm)',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.borderColor = 'var(--card-hover-border)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
                   >
                     {/* Icon */}
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      days < 0 ? 'bg-red-100' : days <= 7 ? 'bg-orange-100' : days <= 30 ? 'bg-amber-100' : 'bg-emerald-100'
-                    }`}>
-                      <CalendarIcon className={`w-5 h-5 ${
-                        days < 0 ? 'text-red-500' : days <= 7 ? 'text-orange-500' : days <= 30 ? 'text-amber-500' : 'text-emerald-500'
-                      }`} />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                         style={{ background: getDaysIconBg(days) }}>
+                      <CalendarIcon className="w-5 h-5" style={{ color: getDaysIconColor(days) }} />
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">
+                      <p className="font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                         {batch.product?.product_name || 'Sản phẩm'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                         {batch.batch_code ? `Lô: ${batch.batch_code}` : 'Không có mã lô'}
                         {batch.manufacturing_date ? ` • NSX: ${formatDate(batch.manufacturing_date)}` : ''}
                       </p>
@@ -422,18 +486,19 @@ export default function Inventory() {
 
                     {/* HSD */}
                     <div className="text-right flex-shrink-0 hidden sm:block">
-                      <p className="text-xs text-gray-400">Hạn sử dụng</p>
-                      <p className="font-semibold text-gray-700 text-sm">{formatDate(batch.expiry_date)}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Hạn sử dụng</p>
+                      <p className="font-semibold text-sm" style={{ color: 'var(--text-secondary)' }}>{formatDate(batch.expiry_date)}</p>
                     </div>
 
                     {/* Quantity */}
                     <div className="text-right flex-shrink-0 hidden sm:block">
-                      <p className="text-xs text-gray-400">Số lượng</p>
-                      <p className="font-semibold text-gray-700">{batch.quantity}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Số lượng</p>
+                      <p className="font-semibold" style={{ color: 'var(--text-secondary)' }}>{batch.quantity}</p>
                     </div>
 
                     {/* Days badge */}
-                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border flex-shrink-0 ${getDaysBadge(days)}`}>
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold flex-shrink-0"
+                          style={getDaysBadgeStyle(days)}>
                       {getDaysLabel(days)}
                     </span>
 
@@ -442,11 +507,14 @@ export default function Inventory() {
                       onClick={() => deleteBatch(batch.id)}
                       disabled={deletingBatchId === batch.id}
                       title="Xóa lô"
-                      className="w-8 h-8 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 flex items-center justify-center opacity-0 group-hover/batch:opacity-100 transition-all cursor-pointer disabled:opacity-50 flex-shrink-0"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover/batch:opacity-100 transition-all cursor-pointer disabled:opacity-50 flex-shrink-0"
+                      style={{ color: 'var(--danger)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.borderColor = 'var(--danger-light)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
                     >
                       {deletingBatchId === batch.id
-                        ? <span className="w-3.5 h-3.5 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
-                        : <TrashIcon className="w-4 h-4 text-red-400" />
+                        ? <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--danger-light)', borderTopColor: 'var(--danger)' }} />
+                        : <TrashIcon className="w-4 h-4" />
                       }
                     </button>
                   </div>
@@ -463,25 +531,31 @@ export default function Inventory() {
           className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
           onClick={() => setShowBatchModal(false)}
         >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="absolute inset-0 modal-overlay" />
           <div
-            className="relative bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-modal-in"
+            className="relative rounded-2xl w-full max-w-md overflow-hidden animate-modal-in"
+            style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-6 py-5 border-b border-gray-100">
+            <div className="px-6 py-5" style={{ borderBottom: '1px solid var(--border-primary)' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-md">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
+                       style={{ background: 'linear-gradient(135deg, var(--danger), var(--warning))' }}>
                     <CalendarIcon className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">Thêm lô hàng</h3>
-                    <p className="text-sm text-gray-400">Nhập thông tin lô & hạn sử dụng</p>
+                    <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Thêm lô hàng</h3>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nhập thông tin lô & hạn sử dụng</p>
                   </div>
                 </div>
-                <button onClick={() => setShowBatchModal(false)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center cursor-pointer">
-                  <XIcon className="w-4 h-4 text-gray-400" />
+                <button onClick={() => setShowBatchModal(false)}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+                        style={{ color: 'var(--text-muted)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-inset)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <XIcon className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -490,13 +564,13 @@ export default function Inventory() {
             <div className="p-6 space-y-4">
               {/* Chọn sản phẩm */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Sản phẩm <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                  Sản phẩm <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
                 <select
                   value={batchForm.product_id}
                   onChange={(e) => setBatchForm({ ...batchForm, product_id: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm transition-all bg-white"
+                  className="w-full input-themed cursor-pointer"
                 >
                   <option value="">— Chọn sản phẩm —</option>
                   {products.map((p) => (
@@ -507,56 +581,57 @@ export default function Inventory() {
 
               {/* Mã lô */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mã lô (tùy chọn)</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Mã lô (tùy chọn)</label>
                 <input
                   type="text"
                   value={batchForm.batch_code}
                   onChange={(e) => setBatchForm({ ...batchForm, batch_code: e.target.value })}
                   placeholder="VD: LOT-2025-001"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm transition-all"
+                  className="w-full input-themed"
                 />
               </div>
 
               {/* NSX + HSD */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Ngày SX</label>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Ngày SX</label>
                   <input
                     type="date"
                     value={batchForm.manufacturing_date}
                     onChange={(e) => setBatchForm({ ...batchForm, manufacturing_date: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm transition-all"
+                    className="w-full input-themed"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Hạn SD <span className="text-red-400">*</span>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Hạn SD <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
                   <input
                     type="date"
                     value={batchForm.expiry_date}
                     onChange={(e) => setBatchForm({ ...batchForm, expiry_date: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm transition-all"
+                    className="w-full input-themed"
                   />
                 </div>
               </div>
 
               {/* Số lượng */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Số lượng</label>
+                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Số lượng</label>
                 <input
                   type="number"
                   min="0"
                   value={batchForm.quantity}
                   onChange={(e) => setBatchForm({ ...batchForm, quantity: e.target.value })}
                   placeholder="0"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm transition-all"
+                  className="w-full input-themed"
                 />
               </div>
 
               {/* Preview HSD */}
               {batchForm.expiry_date && (
-                <div className={`flex items-center gap-2 p-3 rounded-xl border animate-fade-in ${getDaysBadge(daysUntil(batchForm.expiry_date))}`}>
+                <div className="flex items-center gap-2 p-3 rounded-xl animate-fade-in"
+                     style={getDaysBadgeStyle(daysUntil(batchForm.expiry_date))}>
                   <ClockIcon className="w-4 h-4" />
                   <span className="text-sm font-medium">{getDaysLabel(daysUntil(batchForm.expiry_date))}</span>
                   <span className="text-xs ml-auto">{formatDate(batchForm.expiry_date)}</span>
@@ -565,17 +640,22 @@ export default function Inventory() {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/40 flex items-center justify-end gap-2.5">
+            <div className="px-6 py-4 flex items-center justify-end gap-2.5"
+                 style={{ borderTop: '1px solid var(--border-primary)', background: 'var(--bg-inset)' }}>
               <button
                 onClick={() => { setShowBatchModal(false); setBatchForm({ product_id: '', batch_code: '', manufacturing_date: '', expiry_date: '', quantity: '' }); }}
-                className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-100 transition-colors cursor-pointer"
+                className="btn-secondary"
               >
                 Hủy
               </button>
               <button
                 onClick={createBatch}
                 disabled={creatingBatch || !batchForm.product_id || !batchForm.expiry_date}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-orange-600 text-white text-sm font-semibold shadow-md shadow-red-200 hover:shadow-lg hover:shadow-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: 'linear-gradient(135deg, var(--danger), var(--warning))',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.25)',
+                }}
               >
                 {creatingBatch ? (
                   <span className="flex items-center gap-2">

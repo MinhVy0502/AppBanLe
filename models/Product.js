@@ -36,6 +36,12 @@ const Product = sequelize.define('Product', {
     allowNull: false,
     defaultValue: 0,
   },
+  cost_price: {
+    type: DataTypes.DECIMAL(12, 2),
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'Giá vốn / giá nhập',
+  },
   stock: {
     type: DataTypes.INTEGER,
     allowNull: false,

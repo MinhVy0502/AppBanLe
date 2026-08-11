@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 
 /* ===================================================================
-   ICONS
+   SVG ICONS
    =================================================================== */
 const UserIcon = ({ className = 'w-5 h-5' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -55,6 +55,18 @@ const TrendUpIcon = ({ className = 'w-5 h-5' }) => (
 const ClockIcon = ({ className = 'w-4 h-4' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const StoreIcon = ({ className = 'w-5 h-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
+  </svg>
+);
+
+const CheckIcon = ({ className = 'w-5 h-5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
   </svg>
 );
 
@@ -126,11 +138,11 @@ export default function Dashboard() {
       <div className="flex items-center justify-center py-32">
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 mb-4">
-            <div className="w-3 h-3 rounded-full bg-indigo-500 animate-pulse-dot" style={{ animationDelay: '0s' }} />
-            <div className="w-3 h-3 rounded-full bg-purple-500 animate-pulse-dot" style={{ animationDelay: '0.2s' }} />
-            <div className="w-3 h-3 rounded-full bg-pink-500 animate-pulse-dot" style={{ animationDelay: '0.4s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: 'var(--brand-gradient-from)', animationDelay: '0s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: 'var(--brand-gradient-to)', animationDelay: '0.2s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: '#ec4899', animationDelay: '0.4s' }} />
           </div>
-          <p className="text-gray-400 font-medium">Đang tải thống kê...</p>
+          <p style={{ color: 'var(--text-muted)' }} className="font-medium">Đang tải thống kê...</p>
         </div>
       </div>
     );
@@ -143,15 +155,19 @@ export default function Dashboard() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* ==================== PROFILE HEADER ==================== */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-3xl p-6 sm:p-8 mb-6 shadow-xl shadow-indigo-200/50 relative overflow-hidden">
+      <div className="rounded-2xl p-6 sm:p-8 mb-6 relative overflow-hidden animate-fade-in-up"
+           style={{
+             background: 'linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to), #a855f7)',
+             boxShadow: '0 8px 32px rgba(99, 102, 241, 0.25)',
+           }}>
         {/* Decorative */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/3 -translate-x-1/4" />
 
         <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Avatar */}
-          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-            <span className="text-4xl">🏪</span>
+          <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-lg">
+            <StoreIcon className="w-8 h-8 text-white" />
           </div>
 
           <div className="flex-1">
@@ -165,72 +181,109 @@ export default function Dashboard() {
           {/* Quick stat */}
           <div className="flex gap-3">
             <div className="bg-white/15 backdrop-blur-sm rounded-2xl px-5 py-3 text-center">
-              <p className="text-white/60 text-xs">Tháng này</p>
+              <p className="text-white/60 text-xs">Doanh thu tháng này</p>
               <p className="text-white font-bold text-lg">{formatPrice(summary.currentMonth.revenue)}</p>
-              <p className="text-white/50 text-xs">{summary.currentMonth.orders} đơn</p>
+              {summary.currentMonth.profit > 0 && (
+                <p className="text-success-light text-xs font-semibold">
+                  + Lãi {formatPrice(summary.currentMonth.profit)}
+                </p>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* ==================== SUMMARY CARDS ==================== */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
         {/* Card: Tổng doanh thu */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <CurrencyIcon className="w-5 h-5 text-emerald-600" />
+        <div className="card-themed p-4 sm:p-5 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--success-bg)' }}>
+              <CurrencyIcon className="w-4 h-4" style={{ color: 'var(--success)' }} />
             </div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Tổng doanh thu</p>
+            <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Doanh thu</p>
           </div>
-          <p className="text-xl sm:text-2xl font-extrabold text-gray-900">{formatPrice(summary.totalRevenue)}</p>
+          <p className="text-lg sm:text-xl font-extrabold animate-count-up truncate" style={{ color: 'var(--text-primary)' }}>
+            {formatPrice(summary.totalRevenue)}
+          </p>
+        </div>
+
+        {/* Card: Tổng lợi nhuận */}
+        <div className="card-themed p-4 sm:p-5 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.1)' }}>
+              <TrendUpIcon className="w-4 h-4" style={{ color: '#10b981' }} />
+            </div>
+            <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Lợi nhuận</p>
+          </div>
+          <p className="text-lg sm:text-xl font-extrabold animate-count-up truncate" style={{ color: 'var(--success)' }}>
+            {formatPrice(summary.totalProfit)}
+          </p>
         </div>
 
         {/* Card: TB tháng */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-              <TrendUpIcon className="w-5 h-5 text-indigo-600" />
+        <div className="card-themed p-4 sm:p-5 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--brand-light)' }}>
+              <TrendUpIcon className="w-4 h-4" style={{ color: 'var(--brand-primary)' }} />
             </div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">TB / tháng</p>
+            <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>TB / tháng</p>
           </div>
-          <p className="text-xl sm:text-2xl font-extrabold text-gray-900">{formatPrice(summary.avgMonthlyRevenue)}</p>
+          <p className="text-lg sm:text-xl font-extrabold animate-count-up truncate" style={{ color: 'var(--text-primary)' }}>
+            {formatPrice(summary.avgMonthlyRevenue)}
+          </p>
+          <p className="text-[10px] sm:text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>
+            Lãi: {formatPrice(summary.avgMonthlyProfit)}
+          </p>
+        </div>
+
+        {/* Card: Khách hàng */}
+        <div className="card-themed p-4 sm:p-5 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(236,72,153,0.1)' }}>
+              <UserIcon className="w-4 h-4" style={{ color: '#ec4899' }} />
+            </div>
+            <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Khách hàng</p>
+          </div>
+          <p className="text-lg sm:text-xl font-extrabold animate-count-up" style={{ color: 'var(--text-primary)' }}>
+            {summary.totalCustomers}
+          </p>
+          {Number(summary.totalDebt) > 0 ? (
+            <p className="text-[10px] sm:text-xs mt-1 truncate font-semibold" style={{ color: 'var(--warning)' }}>Nợ: {formatPrice(summary.totalDebt)}</p>
+          ) : (
+            <p className="text-[10px] sm:text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>Không có nợ xấu</p>
+          )}
         </div>
 
         {/* Card: Tổng đơn */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-              <ReceiptIcon className="w-5 h-5 text-purple-600" />
+        <div className="card-themed p-4 sm:p-5 animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(168,85,247,0.1)' }}>
+              <ReceiptIcon className="w-4 h-4" style={{ color: '#a855f7' }} />
             </div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Tổng đơn</p>
+            <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Hóa đơn</p>
           </div>
-          <p className="text-xl sm:text-2xl font-extrabold text-gray-900">{summary.totalOrders}</p>
-          <p className="text-xs text-gray-400 mt-1">{summary.totalProducts} sản phẩm</p>
+          <p className="text-lg sm:text-xl font-extrabold animate-count-up" style={{ color: 'var(--text-primary)' }}>
+            {summary.totalOrders}
+          </p>
+          <p className="text-[10px] sm:text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>{summary.totalProducts} sản phẩm</p>
         </div>
 
         {/* Card: Cảnh báo */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              (summary.expiredCount + summary.expiringCount) > 0 ? 'bg-red-100' : 'bg-gray-100'
-            }`}>
-              <AlertIcon className={`w-5 h-5 ${(summary.expiredCount + summary.expiringCount) > 0 ? 'text-red-500' : 'text-gray-400'}`} />
+        <div className="card-themed p-4 sm:p-5 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                 style={{ background: (summary.expiredCount + summary.expiringCount) > 0 ? 'var(--danger-bg)' : 'var(--bg-inset)' }}>
+              <AlertIcon className="w-4 h-4" style={{ color: (summary.expiredCount + summary.expiringCount) > 0 ? 'var(--danger)' : 'var(--text-muted)' }} />
             </div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Cảnh báo</p>
+            <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Cảnh báo</p>
           </div>
           <div className="space-y-1">
-            {summary.expiredCount > 0 && (
-              <p className="text-sm text-red-600 font-semibold">{summary.expiredCount} lô hết hạn</p>
-            )}
-            {summary.expiringCount > 0 && (
-              <p className="text-sm text-orange-600 font-semibold">{summary.expiringCount} lô sắp hết hạn</p>
-            )}
-            {summary.lowStockCount > 0 && (
-              <p className="text-sm text-sky-600 font-semibold">{summary.lowStockCount} SP tồn kho thấp</p>
-            )}
+            {summary.expiredCount > 0 && <p className="text-[10px] sm:text-xs font-semibold" style={{ color: 'var(--danger)' }}>{summary.expiredCount} lô hết hạn</p>}
+            {summary.expiringCount > 0 && <p className="text-[10px] sm:text-xs font-semibold" style={{ color: 'var(--warning)' }}>{summary.expiringCount} lô sắp hết hạn</p>}
+            {summary.lowStockCount > 0 && <p className="text-[10px] sm:text-xs font-semibold" style={{ color: 'var(--info)' }}>{summary.lowStockCount} SP sắp hết</p>}
             {(summary.expiredCount + summary.expiringCount + summary.lowStockCount) === 0 && (
-              <p className="text-sm text-emerald-600 font-semibold">✓ Không có</p>
+              <p className="text-[10px] sm:text-xs font-semibold" style={{ color: 'var(--success)' }}>Tuyệt vời!</p>
             )}
           </div>
         </div>
@@ -238,10 +291,10 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ==================== BIỂU ĐỒ DOANH THU ==================== */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+        <div className="lg:col-span-2 card-themed p-5 sm:p-6 animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
           <div className="flex items-center gap-2 mb-5">
-            <ChartIcon className="w-5 h-5 text-indigo-500" />
-            <h2 className="font-bold text-gray-900">Doanh thu theo tháng</h2>
+            <ChartIcon className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
+            <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Doanh thu theo tháng</h2>
           </div>
 
           {/* Bar chart */}
@@ -252,24 +305,28 @@ export default function Dashboard() {
               return (
                 <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group relative">
                   {/* Tooltip */}
-                  <div className="absolute bottom-full mb-2 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-lg">
-                    <p className="font-bold">{getMonthLabel(m.month)}</p>
-                    <p>{formatPrice(m.revenue)}</p>
-                    <p>{m.orders} đơn</p>
+                  <div className="absolute bottom-full mb-2 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10"
+                       style={{ background: 'var(--text-primary)', boxShadow: 'var(--shadow-lg)' }}>
+                    <p className="font-bold border-b border-white/20 pb-1 mb-1">{getMonthLabel(m.month)}</p>
+                    <p>DT: {formatPrice(m.revenue)}</p>
+                    {m.profit > 0 && <p style={{ color: '#34d399' }}>Lãi: {formatPrice(m.profit)}</p>}
+                    <p className="opacity-75">{m.orders} đơn</p>
                   </div>
                   {/* Bar */}
                   <div
-                    className={`w-full rounded-t-lg transition-all duration-500 cursor-pointer ${
-                      isCurrentMonth
-                        ? 'bg-gradient-to-t from-indigo-500 to-purple-500 shadow-md shadow-indigo-200'
-                        : m.revenue > 0
-                          ? 'bg-gradient-to-t from-indigo-200 to-indigo-300 group-hover:from-indigo-400 group-hover:to-indigo-500'
-                          : 'bg-gray-100'
-                    }`}
+                    className="w-full rounded-t-lg transition-all duration-500 cursor-pointer"
                     style={{
                       height: `${Math.max(height, 2)}%`,
+                      background: isCurrentMonth
+                        ? 'linear-gradient(to top, var(--brand-gradient-from), var(--brand-gradient-to))'
+                        : m.revenue > 0
+                          ? 'var(--brand-light)'
+                          : 'var(--bg-inset)',
+                      boxShadow: isCurrentMonth ? 'var(--shadow-glow)' : 'none',
                       animationDelay: `${i * 0.05}s`,
                     }}
+                    onMouseEnter={e => { if (!isCurrentMonth && m.revenue > 0) e.currentTarget.style.background = 'linear-gradient(to top, var(--brand-gradient-from), var(--brand-gradient-to))'; }}
+                    onMouseLeave={e => { if (!isCurrentMonth && m.revenue > 0) e.currentTarget.style.background = 'var(--brand-light)'; }}
                   />
                 </div>
               );
@@ -280,9 +337,8 @@ export default function Dashboard() {
           <div className="flex gap-1.5 sm:gap-2">
             {monthlyData.map((m, i) => (
               <div key={m.month} className="flex-1 text-center">
-                <p className={`text-[10px] sm:text-xs font-medium ${
-                  i === monthlyData.length - 1 ? 'text-indigo-600' : 'text-gray-400'
-                }`}>
+                <p className="text-[10px] sm:text-xs font-medium"
+                   style={{ color: i === monthlyData.length - 1 ? 'var(--brand-primary)' : 'var(--text-muted)' }}>
                   {getShortMonth(m.month)}
                 </p>
               </div>
@@ -290,47 +346,54 @@ export default function Dashboard() {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+          <div className="flex items-center gap-4 mt-4 pt-4" style={{ borderTop: '1px solid var(--border-secondary)' }}>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-gradient-to-t from-indigo-500 to-purple-500" />
-              <span className="text-xs text-gray-500">Tháng hiện tại</span>
+              <div className="w-3 h-3 rounded"
+                   style={{ background: 'linear-gradient(to top, var(--brand-gradient-from), var(--brand-gradient-to))' }} />
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Tháng hiện tại</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-indigo-200" />
-              <span className="text-xs text-gray-500">Các tháng trước</span>
+              <div className="w-3 h-3 rounded" style={{ background: 'var(--brand-light)' }} />
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Các tháng trước</span>
             </div>
-            <div className="ml-auto text-xs text-gray-400">
-              TB: <span className="font-bold text-indigo-600">{formatPrice(summary.avgMonthlyRevenue)}</span>/tháng
+            <div className="ml-auto text-xs" style={{ color: 'var(--text-muted)' }}>
+              TB: <span className="font-bold" style={{ color: 'var(--brand-primary)' }}>{formatPrice(summary.avgMonthlyRevenue)}</span>/tháng
             </div>
           </div>
         </div>
 
         {/* ==================== HÓA ĐƠN GẦN NHẤT ==================== */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+        <div className="card-themed p-5 sm:p-6 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
           <div className="flex items-center gap-2 mb-4">
-            <ReceiptIcon className="w-5 h-5 text-purple-500" />
-            <h2 className="font-bold text-gray-900">Hóa đơn gần đây</h2>
+            <ReceiptIcon className="w-5 h-5" style={{ color: '#a855f7' }} />
+            <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Hóa đơn gần đây</h2>
           </div>
 
           {recentOrders.length === 0 ? (
             <div className="text-center py-10">
-              <ReceiptIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">Chưa có hóa đơn nào</p>
+              <ReceiptIcon className="w-10 h-10 mx-auto mb-2" style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Chưa có hóa đơn nào</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[340px] overflow-y-auto custom-scrollbar">
               {recentOrders.map((order, i) => (
                 <div
                   key={order.id}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/80 hover:bg-gray-100/80 transition-colors animate-fade-in"
-                  style={{ animationDelay: `${i * 0.03}s` }}
+                  className="flex items-center gap-3 p-3 rounded-xl transition-colors animate-fade-in"
+                  style={{
+                    background: 'var(--bg-inset)',
+                    animationDelay: `${i * 0.03}s`,
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-inset)'}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-purple-600">#{order.id}</span>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                       style={{ background: 'rgba(168, 85, 247, 0.1)' }}>
+                    <span className="text-xs font-bold" style={{ color: '#a855f7' }}>#{order.id}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 text-sm">{formatPrice(order.total_price)}</p>
-                    <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                    <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{formatPrice(order.total_price)}</p>
+                    <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: 'var(--text-muted)' }}>
                       <ClockIcon className="w-3 h-3" />
                       {formatDate(order.created_at)} {formatTime(order.created_at)}
                     </p>
@@ -345,49 +408,51 @@ export default function Dashboard() {
       {/* ==================== ROW 3: Lô hàng + Bảng tháng ==================== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Lô hàng sắp hết hạn */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+        <div className="card-themed p-5 sm:p-6 animate-fade-in-up" style={{ animationDelay: '0.35s' }}>
           <div className="flex items-center gap-2 mb-4">
-            <CalendarIcon className="w-5 h-5 text-orange-500" />
-            <h2 className="font-bold text-gray-900">Lô hàng sắp hết hạn</h2>
+            <CalendarIcon className="w-5 h-5" style={{ color: 'var(--warning)' }} />
+            <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Lô hàng sắp hết hạn</h2>
           </div>
 
           {upcomingBatches.length === 0 ? (
             <div className="text-center py-10">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-3">
-                <span className="text-xl">✅</span>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                   style={{ background: 'var(--success-bg)' }}>
+                <CheckIcon className="w-6 h-6" style={{ color: 'var(--success)' }} />
               </div>
-              <p className="text-sm text-gray-400">Không có lô nào sắp hết hạn</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Không có lô nào sắp hết hạn</p>
             </div>
           ) : (
             <div className="space-y-2.5">
               {upcomingBatches.map((batch) => {
                 const days = daysUntil(batch.expiry_date);
-                const badgeColor = days <= 7
-                  ? 'bg-red-100 text-red-700 border-red-200'
+                const badgeStyle = days <= 7
+                  ? { background: 'var(--danger-bg)', color: 'var(--danger)', borderColor: 'var(--danger-light)' }
                   : days <= 30
-                    ? 'bg-orange-100 text-orange-700 border-orange-200'
-                    : 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                    ? { background: 'var(--warning-bg)', color: 'var(--warning)', borderColor: 'var(--warning-light)' }
+                    : { background: 'var(--success-bg)', color: 'var(--success)', borderColor: 'var(--success-light)' };
                 return (
                   <div
                     key={batch.id}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/80 hover:bg-gray-100/80 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl transition-colors"
+                    style={{ background: 'var(--bg-inset)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-inset)'}
                   >
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      days <= 7 ? 'bg-red-100' : days <= 30 ? 'bg-orange-100' : 'bg-emerald-100'
-                    }`}>
-                      <CalendarIcon className={`w-4 h-4 ${
-                        days <= 7 ? 'text-red-500' : days <= 30 ? 'text-orange-500' : 'text-emerald-500'
-                      }`} />
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                         style={{ background: badgeStyle.background }}>
+                      <CalendarIcon className="w-4 h-4" style={{ color: badgeStyle.color }} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm truncate">
+                      <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                         {batch.product?.product_name || 'Sản phẩm'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                         {batch.batch_code || 'Không mã'} • HSD: {formatDate(batch.expiry_date)}
                       </p>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border flex-shrink-0 ${badgeColor}`}>
+                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold flex-shrink-0"
+                          style={{ ...badgeStyle, border: `1px solid ${badgeStyle.borderColor}` }}>
                       {days <= 0 ? 'Hết hạn' : `${days} ngày`}
                     </span>
                   </div>
@@ -398,20 +463,20 @@ export default function Dashboard() {
         </div>
 
         {/* Bảng doanh thu theo tháng */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+        <div className="card-themed p-5 sm:p-6 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
           <div className="flex items-center gap-2 mb-4">
-            <ChartIcon className="w-5 h-5 text-indigo-500" />
-            <h2 className="font-bold text-gray-900">Chi tiết theo tháng</h2>
+            <ChartIcon className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
+            <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Chi tiết theo tháng</h2>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-2.5 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tháng</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Doanh thu</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Đơn hàng</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">TB/đơn</th>
+                <tr style={{ borderBottom: '1px solid var(--border-secondary)' }}>
+                  <th className="text-left py-2.5 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Tháng</th>
+                  <th className="text-right py-2.5 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Doanh thu</th>
+                  <th className="text-right py-2.5 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Đơn hàng</th>
+                  <th className="text-right py-2.5 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>TB/đơn</th>
                 </tr>
               </thead>
               <tbody>
@@ -421,29 +486,35 @@ export default function Dashboard() {
                   return (
                     <tr
                       key={m.month}
-                      className={`border-b border-gray-50 hover:bg-gray-50/80 transition-colors ${
-                        isCurrentMonth ? 'bg-indigo-50/40' : ''
-                      }`}
+                      className="transition-colors"
+                      style={{
+                        borderBottom: '1px solid var(--border-secondary)',
+                        background: isCurrentMonth ? 'var(--brand-light)' : 'transparent',
+                      }}
+                      onMouseEnter={e => { if (!isCurrentMonth) e.currentTarget.style.background = 'var(--bg-inset)'; }}
+                      onMouseLeave={e => { if (!isCurrentMonth) e.currentTarget.style.background = 'transparent'; }}
                     >
                       <td className="py-2.5 px-3">
-                        <span className={`font-medium ${isCurrentMonth ? 'text-indigo-600' : 'text-gray-700'}`}>
+                        <span className="font-medium" style={{ color: isCurrentMonth ? 'var(--brand-primary)' : 'var(--text-secondary)' }}>
                           {getMonthLabel(m.month)}
                         </span>
                         {isCurrentMonth && (
-                          <span className="ml-1.5 text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-bold">
+                          <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold"
+                                style={{ background: 'var(--brand-light)', color: 'var(--brand-primary)' }}>
                             Hiện tại
                           </span>
                         )}
                       </td>
-                      <td className={`py-2.5 px-3 text-right font-bold ${
-                        m.revenue > 0 ? (isCurrentMonth ? 'text-indigo-600' : 'text-gray-900') : 'text-gray-300'
-                      }`}>
+                      <td className="py-2.5 px-3 text-right font-bold"
+                          style={{ color: m.revenue > 0 ? (isCurrentMonth ? 'var(--brand-primary)' : 'var(--text-primary)') : 'var(--text-muted)' }}>
                         {m.revenue > 0 ? formatPrice(m.revenue) : '—'}
                       </td>
-                      <td className={`py-2.5 px-3 text-right ${m.orders > 0 ? 'text-gray-700' : 'text-gray-300'}`}>
+                      <td className="py-2.5 px-3 text-right"
+                          style={{ color: m.orders > 0 ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
                         {m.orders || '—'}
                       </td>
-                      <td className={`py-2.5 px-3 text-right text-xs ${avgPerOrder > 0 ? 'text-gray-500' : 'text-gray-300'}`}>
+                      <td className="py-2.5 px-3 text-right text-xs"
+                          style={{ color: avgPerOrder > 0 ? 'var(--text-tertiary)' : 'var(--text-muted)' }}>
                         {avgPerOrder > 0 ? formatPrice(avgPerOrder) : '—'}
                       </td>
                     </tr>

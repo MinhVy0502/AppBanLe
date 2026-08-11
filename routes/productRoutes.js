@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const store_id = req.store_id;
-    const { product_name, price, stock, shelf_id, unit_type, units_per_pack } = req.body;
+    const { product_name, price, cost_price, stock, shelf_id, unit_type, units_per_pack } = req.body;
 
     // --- Validate đầu vào ---
     if (!product_name || !product_name.trim()) {
@@ -82,6 +82,7 @@ router.post('/', async (req, res) => {
       shelf_id: shelf_id || null,
       product_name: product_name.trim(),
       price: Number(price),
+      cost_price: cost_price !== undefined ? Number(cost_price) : 0,
       stock: stock !== undefined ? Number(stock) : 0,
       unit_type: finalUnitType,
       units_per_pack: finalUnitType === 'le' ? 1 : finalUnitsPer,
@@ -95,6 +96,62 @@ router.post('/', async (req, res) => {
 
   } catch (error) {
     console.error('Lỗi thêm sản phẩm:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống. Vui lòng thử lại sau.',
+    });
+  }
+});
+
+// ==================================================
+//  PUT /api/products/:id — Chỉnh sửa sản phẩm
+// ==================================================
+router.put('/:id', async (req, res) => {
+  try {
+    const store_id = req.store_id;
+    const productId = req.params.id;
+
+    const product = await Product.findOne({
+      where: { id: productId, store_id },
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy sản phẩm này trong cửa hàng của bạn.',
+      });
+    }
+
+    const { product_name, price, cost_price, stock, unit_type, units_per_pack } = req.body;
+
+    if (product_name !== undefined) {
+      if (!product_name.trim()) {
+        return res.status(400).json({ success: false, message: 'Tên sản phẩm không được để trống.' });
+      }
+      product.product_name = product_name.trim();
+    }
+    if (price !== undefined) product.price = Number(price);
+    if (cost_price !== undefined) product.cost_price = Number(cost_price);
+    if (stock !== undefined) product.stock = Number(stock);
+
+    if (unit_type !== undefined) {
+      const validUnitTypes = ['le', 'loc', 'thung', 'hop'];
+      product.unit_type = validUnitTypes.includes(unit_type) ? unit_type : 'le';
+    }
+    if (units_per_pack !== undefined) {
+      product.units_per_pack = product.unit_type === 'le' ? 1 : (Number(units_per_pack) > 0 ? Number(units_per_pack) : 1);
+    }
+
+    await product.save();
+
+    return res.json({
+      success: true,
+      message: 'Cập nhật sản phẩm thành công!',
+      data: product,
+    });
+
+  } catch (error) {
+    console.error('Lỗi cập nhật sản phẩm:', error);
     return res.status(500).json({
       success: false,
       message: 'Lỗi hệ thống. Vui lòng thử lại sau.',

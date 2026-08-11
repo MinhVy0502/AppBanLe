@@ -1,6 +1,6 @@
 const express = require('express');
 const { Op, fn, col, literal } = require('sequelize');
-const { Order, Product, Batch, Store } = require('../models');
+const { Order, Product, Batch, Store, Customer } = require('../models');
 
 const router = express.Router();
 
@@ -19,6 +19,12 @@ router.get('/stats', async (req, res) => {
     // --- Tổng doanh thu ---
     const totalRevenue = await Order.sum('total_price', { where: { store_id } }) || 0;
 
+    // --- Tổng giá vốn ---
+    const totalCost = await Order.sum('total_cost', { where: { store_id } }) || 0;
+
+    // --- Tổng lợi nhuận ---
+    const totalProfit = totalRevenue - totalCost;
+
     // --- Tổng số đơn ---
     const totalOrders = await Order.count({ where: { store_id } });
 
@@ -27,6 +33,12 @@ router.get('/stats', async (req, res) => {
 
     // --- Tổng lô hàng ---
     const totalBatches = await Batch.count({ where: { store_id } });
+
+    // --- Tổng khách hàng ---
+    const totalCustomers = await Customer.count({ where: { store_id } });
+
+    // --- Tổng nợ ---
+    const totalDebt = await Customer.sum('total_debt', { where: { store_id } }) || 0;
 
     // --- Lô sắp hết hạn (7 ngày) ---
     const today = new Date().toISOString().split('T')[0];
@@ -50,10 +62,10 @@ router.get('/stats', async (req, res) => {
       where: { store_id, stock: { [Op.lte]: 5 } },
     });
 
-    // --- Doanh thu & đơn hàng theo tháng (12 tháng gần nhất) ---
+    // --- Doanh thu & lợi nhuận theo tháng (12 tháng gần nhất) ---
     const allOrders = await Order.findAll({
       where: { store_id },
-      attributes: ['total_price', 'created_at'],
+      attributes: ['total_price', 'total_cost', 'created_at'],
       order: [['created_at', 'ASC']],
       raw: true,
     });
@@ -64,9 +76,11 @@ router.get('/stats', async (req, res) => {
       const d = new Date(order.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!monthlyMap[key]) {
-        monthlyMap[key] = { month: key, revenue: 0, orders: 0 };
+        monthlyMap[key] = { month: key, revenue: 0, cost: 0, profit: 0, orders: 0 };
       }
       monthlyMap[key].revenue += Number(order.total_price);
+      monthlyMap[key].cost += Number(order.total_cost) || 0;
+      monthlyMap[key].profit += Number(order.total_price) - (Number(order.total_cost) || 0);
       monthlyMap[key].orders += 1;
     });
 
@@ -76,7 +90,7 @@ router.get('/stats', async (req, res) => {
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      monthlyData.push(monthlyMap[key] || { month: key, revenue: 0, orders: 0 });
+      monthlyData.push(monthlyMap[key] || { month: key, revenue: 0, cost: 0, profit: 0, orders: 0 });
     }
 
     // --- Trung bình doanh thu tháng ---
@@ -85,9 +99,13 @@ router.get('/stats', async (req, res) => {
       ? monthsWithRevenue.reduce((sum, m) => sum + m.revenue, 0) / monthsWithRevenue.length
       : 0;
 
+    const avgMonthlyProfit = monthsWithRevenue.length > 0
+      ? monthsWithRevenue.reduce((sum, m) => sum + m.profit, 0) / monthsWithRevenue.length
+      : 0;
+
     // --- Tháng hiện tại ---
     const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const currentMonth = monthlyMap[currentMonthKey] || { month: currentMonthKey, revenue: 0, orders: 0 };
+    const currentMonth = monthlyMap[currentMonthKey] || { month: currentMonthKey, revenue: 0, cost: 0, profit: 0, orders: 0 };
 
     // --- Lô hàng gần hết hạn nhất ---
     const upcomingBatches = await Batch.findAll({
@@ -100,6 +118,7 @@ router.get('/stats', async (req, res) => {
     // --- Hóa đơn gần nhất ---
     const recentOrders = await Order.findAll({
       where: { store_id },
+      include: [{ model: Customer, as: 'customer', attributes: ['id', 'customer_name'] }],
       order: [['created_at', 'DESC']],
       limit: 10,
     });
@@ -110,13 +129,18 @@ router.get('/stats', async (req, res) => {
         store,
         summary: {
           totalRevenue,
+          totalCost,
+          totalProfit,
           totalOrders,
           totalProducts,
           totalBatches,
+          totalCustomers,
+          totalDebt,
           expiringCount,
           expiredCount,
           lowStockCount,
           avgMonthlyRevenue: Math.round(avgMonthlyRevenue),
+          avgMonthlyProfit: Math.round(avgMonthlyProfit),
           currentMonth,
         },
         monthlyData,

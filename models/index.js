@@ -4,6 +4,7 @@ const Shelf = require('./Shelf');
 const Product = require('./Product');
 const Order = require('./Order');
 const Batch = require('./Batch');
+const Customer = require('./Customer');
 
 // ===========================
 //  Định nghĩa quan hệ (Associations)
@@ -33,6 +34,14 @@ Batch.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
 Product.hasMany(Batch, { foreignKey: 'product_id', as: 'batches', onDelete: 'CASCADE' });
 Batch.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 
+// --- Store 1:N Customer ---
+Store.hasMany(Customer, { foreignKey: 'store_id', as: 'customers' });
+Customer.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
+
+// --- Customer 1:N Order (customer_id cho phép NULL) ---
+Customer.hasMany(Order, { foreignKey: 'customer_id', as: 'orders' });
+Order.belongsTo(Customer, { foreignKey: 'customer_id', as: 'customer' });
+
 module.exports = {
   sequelize,
   Store,
@@ -40,4 +49,5 @@ module.exports = {
   Product,
   Order,
   Batch,
+  Customer,
 };
