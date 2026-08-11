@@ -1,6 +1,6 @@
 const express = require('express');
 const { Op, fn, col, literal } = require('sequelize');
-const { Order, Product, Batch, Store, Customer } = require('../models');
+const { Order, Product, Batch, Store, Customer, Import } = require('../models');
 
 const router = express.Router();
 
@@ -61,6 +61,10 @@ router.get('/stats', async (req, res) => {
     const lowStockCount = await Product.count({
       where: { store_id, stock: { [Op.lte]: 5 } },
     });
+
+    // --- Tổng chi nhập hàng ---
+    const totalImportCost = await Import.sum('total_cost', { where: { store_id } }) || 0;
+    const totalImports = await Import.count({ where: { store_id } });
 
     // --- Doanh thu & lợi nhuận theo tháng (12 tháng gần nhất) ---
     const allOrders = await Order.findAll({
@@ -142,6 +146,8 @@ router.get('/stats', async (req, res) => {
           avgMonthlyRevenue: Math.round(avgMonthlyRevenue),
           avgMonthlyProfit: Math.round(avgMonthlyProfit),
           currentMonth,
+          totalImportCost,
+          totalImports,
         },
         monthlyData,
         upcomingBatches,

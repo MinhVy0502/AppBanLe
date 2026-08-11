@@ -5,6 +5,7 @@ import Inventory from './components/Inventory';
 import Dashboard from './components/Dashboard';
 import OrderHistory from './components/OrderHistory';
 import Customers from './components/Customers';
+import ImportGoods from './components/ImportGoods';
 
 /* ===================================================================
    SVG ICONS
@@ -158,12 +159,13 @@ export default function App() {
   };
 
   const TABS = [
-    { id: 'dashboard', label: 'Trang chủ', icon: icons.dashboard },
-    { id: 'shelves', label: 'Kệ hàng', icon: icons.shelves },
-    { id: 'checkout', label: 'Tính tiền', icon: icons.checkout },
-    { id: 'orders', label: 'Hóa đơn', icon: icons.checkout },
-    { id: 'customers', label: 'Khách hàng', icon: icons.user },
-    { id: 'inventory', label: 'Lô & Cảnh báo', icon: icons.inventory },
+    { id: 'dashboard', label: 'Trang chủ', icon: icons.dashboard, color: '#6366f1' },
+    { id: 'shelves', label: 'Kệ hàng', icon: icons.shelves, color: '#8b5cf6' },
+    { id: 'imports', label: 'Nhập hàng', icon: icons.store, color: '#10b981' },
+    { id: 'checkout', label: 'Tính tiền', icon: icons.checkout, color: '#f59e0b' },
+    { id: 'orders', label: 'Hóa đơn', icon: icons.checkout, color: '#3b82f6' },
+    { id: 'customers', label: 'Khách hàng', icon: icons.user, color: '#ec4899' },
+    { id: 'inventory', label: 'Cảnh báo', icon: icons.inventory, color: '#ef4444' },
   ];
 
   /* ========== ĐÃ ĐĂNG NHẬP → Hiện tabs ========== */
@@ -171,98 +173,106 @@ export default function App() {
     return (
       <ThemeContext.Provider value={{ theme, toggleTheme }}>
         <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-          {/* ===== TOP NAVIGATION ===== */}
-          <nav className="nav-themed sticky top-0 z-40">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4">
-              {/* Brand */}
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                     style={{ background: 'linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to))' }}>
-                  {icons.store('w-5 h-5 text-white')}
+          {/* ===== TOP BAR — Brand + Actions ===== */}
+          <header className="sticky top-0 z-40" style={{
+            background: theme === 'dark'
+              ? 'rgba(15, 23, 42, 0.85)'
+              : 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(16px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+            borderBottom: '1px solid var(--border-primary)',
+          }}>
+            {/* Row 1: Brand + Actions */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-14">
+                {/* Brand */}
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center animate-glow"
+                       style={{ background: 'linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to))' }}>
+                    {icons.store('w-5 h-5 text-white')}
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm leading-tight" style={{ color: 'var(--text-primary)' }}>
+                      {storeName}
+                    </p>
+                    <p className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>Quản lý Tạp hóa</p>
+                  </div>
                 </div>
-                <div className="hidden sm:block">
-                  <p className="font-bold text-sm leading-tight" style={{ color: 'var(--text-primary)' }}>
-                    {storeName}
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Quản lý Tạp hóa</p>
-                </div>
-              </div>
 
-              {/* Tab buttons — Desktop */}
-              <div className="hidden md:flex items-center gap-1 rounded-xl p-1"
-                   style={{ background: 'var(--bg-inset)' }}>
-                {TABS.map((tab) => (
+                {/* Right actions */}
+                <div className="flex items-center gap-1.5">
+                  {/* Theme toggle */}
                   <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer"
-                    style={{
-                      background: activeTab === tab.id ? 'var(--bg-surface)' : 'transparent',
-                      color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
-                      boxShadow: activeTab === tab.id ? 'var(--shadow-sm)' : 'none',
-                    }}
+                    onClick={toggleTheme}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer"
+                    style={{ color: 'var(--text-tertiary)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-inset)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+                    title={theme === 'dark' ? 'Chuyển sang sáng' : 'Chuyển sang tối'}
                   >
-                    {tab.icon('w-4 h-4')}
-                    <span>{tab.label}</span>
+                    {theme === 'dark' ? icons.sun('w-[18px] h-[18px]') : icons.moon('w-[18px] h-[18px]')}
                   </button>
-                ))}
-              </div>
 
-              {/* Right actions */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Theme toggle */}
-                <button
-                  onClick={toggleTheme}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer"
-                  style={{
-                    background: 'var(--bg-inset)',
-                    color: 'var(--text-tertiary)',
-                  }}
-                  title={theme === 'dark' ? 'Chuyển sang sáng' : 'Chuyển sang tối'}
-                >
-                  {theme === 'dark' ? icons.sun('w-4.5 h-4.5') : icons.moon('w-4.5 h-4.5')}
-                </button>
-
-                {/* Logout */}
-                <button
-                  onClick={logout}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
-                >
-                  {icons.logout('w-4 h-4')}
-                  <span className="hidden sm:inline">Đăng xuất</span>
-                </button>
+                  {/* Logout */}
+                  <button
+                    onClick={logout}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer"
+                    style={{ color: 'var(--text-muted)' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-bg)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {icons.logout('w-4 h-4')}
+                    <span className="hidden sm:inline text-xs">Đăng xuất</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Tab buttons — Mobile (scrollable) */}
-            <div className="md:hidden border-t" style={{ borderColor: 'var(--border-secondary)' }}>
-              <div className="flex overflow-x-auto px-2 py-1.5 gap-1 custom-scrollbar">
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex-shrink-0"
-                    style={{
-                      background: activeTab === tab.id ? 'var(--bg-surface)' : 'transparent',
-                      color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)',
-                      boxShadow: activeTab === tab.id ? 'var(--shadow-sm)' : 'none',
-                    }}
-                  >
-                    {tab.icon('w-4 h-4')}
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
+            {/* Row 2: Tabs */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex overflow-x-auto custom-scrollbar" style={{ scrollbarWidth: 'none' }}>
+                {TABS.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className="relative flex items-center gap-2 px-4 py-3 text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0 group"
+                      style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}
+                    >
+                      {/* Icon with colored background when active */}
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200"
+                        style={{
+                          background: isActive ? `${tab.color}20` : 'transparent',
+                          color: isActive ? tab.color : 'var(--text-muted)',
+                        }}
+                      >
+                        {tab.icon('w-4 h-4')}
+                      </div>
+                      <span>{tab.label}</span>
+
+                      {/* Active indicator — bottom bar */}
+                      <div
+                        className="absolute bottom-0 left-4 right-4 h-[2.5px] rounded-full transition-all duration-300"
+                        style={{
+                          background: isActive ? tab.color : 'transparent',
+                          opacity: isActive ? 1 : 0,
+                          transform: isActive ? 'scaleX(1)' : 'scaleX(0)',
+                        }}
+                      />
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          </nav>
+          </header>
 
           {/* Main content */}
           <main className="animate-fade-in" key={activeTab}>
             {activeTab === 'dashboard' && <Dashboard />}
             {activeTab === 'shelves' && <ShelfManager />}
+            {activeTab === 'imports' && <ImportGoods />}
             {activeTab === 'checkout' && <Checkout />}
             {activeTab === 'orders' && <OrderHistory />}
             {activeTab === 'customers' && <Customers />}

@@ -10,6 +10,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const batchRoutes = require('./routes/batchRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const importRoutes = require('./routes/importRoutes');
 
 // Import middleware
 const authenticateToken = require('./middlewares/authenticateToken');
@@ -36,6 +37,7 @@ app.use('/api/products', authenticateToken, productRoutes);
 app.use('/api/orders', authenticateToken, orderRoutes);
 app.use('/api/batches', authenticateToken, batchRoutes);
 app.use('/api/customers', authenticateToken, customerRoutes);
+app.use('/api/imports', authenticateToken, importRoutes);
 app.use('/api/dashboard', authenticateToken, dashboardRoutes);
 
 // Route profile mẫu (cần token)
