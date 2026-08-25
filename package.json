@@ -4,6 +4,8 @@
   "description": "",
   "main": "sync.js",
   "scripts": {
+    "start": "node app.js",
+    "build:frontend": "cd frontend && npm install && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

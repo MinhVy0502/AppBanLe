@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const { sequelize } = require('./models');
 
 // Import routes
@@ -56,6 +57,16 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
 });
 
 // ===========================
+//  Serve Frontend (Production)
+// ===========================
+app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
+
+// SPA fallback — mọi route không phải API → trả về index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'dist', 'index.html'));
+});
+
+// ===========================
 //  Khởi chạy server
 // ===========================
 async function startServer() {
@@ -64,8 +75,9 @@ async function startServer() {
     await sequelize.authenticate();
     console.log('✅ Kết nối PostgreSQL thành công!');
 
-    // Đồng bộ bảng (alter: true để cập nhật cấu trúc, không mất dữ liệu)
-    await sequelize.sync({ alter: true });
+    // Đồng bộ bảng (alter: true chỉ dùng trong development)
+    const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
+    await sequelize.sync(syncOptions);
     console.log('✅ Đồng bộ các bảng thành công!');
 
     // Khởi chạy Express server (0.0.0.0 = cho phép truy cập từ mạng LAN)
