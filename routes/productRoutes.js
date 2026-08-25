@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
     const products = await Product.findAll({
       where,
       order: [['id', 'ASC']],
+      include: [{ model: Shelf, as: 'shelf', attributes: ['id', 'shelf_name'] }],
     });
 
     return res.json({

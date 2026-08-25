@@ -58,6 +58,12 @@ const XIcon = ({ className = 'w-4 h-4' }) => (
   </svg>
 );
 
+const FolderIcon = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+  </svg>
+);
+
 const UserIcon = ({ className = 'w-4 h-4' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -86,8 +92,10 @@ export default function Checkout() {
   // ---- State ----
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [shelves, setShelves] = useState([]);
   const [cart, setCart] = useState([]); // [{ product, quantity }]
   const [search, setSearch] = useState('');
+  const [selectedShelfId, setSelectedShelfId] = useState('all'); // 'all' | shelf id | 'none'
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -105,26 +113,56 @@ export default function Checkout() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [prodRes, custRes] = await Promise.all([
+      const [prodRes, custRes, shelfRes] = await Promise.all([
         api.get('/products'),
-        api.get('/customers')
+        api.get('/customers'),
+        api.get('/shelves')
       ]);
       setProducts(prodRes.data);
       setCustomers(custRes.data);
+      setShelves(shelfRes.data?.data || shelfRes.data || []);
     } catch (err) {
       console.error('Lỗi tải dữ liệu:', err);
     }
     setLoading(false);
   };
 
-  // ---- Filtered products (search) ----
+  // ---- Filtered products (search + shelf filter) ----
   const filteredProducts = useMemo(() => {
-    if (!search.trim()) return products;
-    const q = search.toLowerCase().trim();
-    return products.filter((p) =>
-      p.product_name.toLowerCase().includes(q)
-    );
-  }, [products, search]);
+    let result = products;
+
+    // Filter by shelf
+    if (selectedShelfId !== 'all') {
+      if (selectedShelfId === 'none') {
+        result = result.filter((p) => !p.shelf_id);
+      } else {
+        result = result.filter((p) => p.shelf_id === Number(selectedShelfId));
+      }
+    }
+
+    // Filter by search text
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      result = result.filter((p) =>
+        p.product_name.toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [products, search, selectedShelfId]);
+
+  // ---- Count products per shelf (for badge) ----
+  const shelfProductCounts = useMemo(() => {
+    const counts = { all: products.length, none: 0 };
+    products.forEach((p) => {
+      if (!p.shelf_id) {
+        counts.none++;
+      } else {
+        counts[p.shelf_id] = (counts[p.shelf_id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [products]);
 
   // ---- Cart total ----
   const totalPrice = useMemo(() => {
@@ -380,6 +418,89 @@ export default function Checkout() {
             )}
           </div>
 
+          {/* Shelf filter tabs */}
+          {shelves.length > 0 && (
+            <div className="mb-5 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar" style={{ scrollbarWidth: 'thin' }}>
+                {/* Tab: Tất cả */}
+                <button
+                  onClick={() => setSelectedShelfId('all')}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0"
+                  style={{
+                    background: selectedShelfId === 'all'
+                      ? 'linear-gradient(135deg, var(--success), #14b8a6)'
+                      : 'var(--bg-inset)',
+                    color: selectedShelfId === 'all' ? '#fff' : 'var(--text-secondary)',
+                    border: selectedShelfId === 'all' ? 'none' : '1px solid var(--border-primary)',
+                    boxShadow: selectedShelfId === 'all' ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
+                  }}
+                >
+                  <PackageIcon className="w-3.5 h-3.5" />
+                  Tất cả
+                  <span className="px-1.5 py-0.5 rounded-md text-xs font-bold" style={{
+                    background: selectedShelfId === 'all' ? 'rgba(255,255,255,0.2)' : 'var(--bg-surface)',
+                    color: selectedShelfId === 'all' ? '#fff' : 'var(--text-muted)',
+                  }}>
+                    {shelfProductCounts.all}
+                  </span>
+                </button>
+
+                {/* Tabs theo từng kệ */}
+                {shelves.map((shelf) => (
+                  <button
+                    key={shelf.id}
+                    onClick={() => setSelectedShelfId(String(shelf.id))}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0"
+                    style={{
+                      background: selectedShelfId === String(shelf.id)
+                        ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
+                        : 'var(--bg-inset)',
+                      color: selectedShelfId === String(shelf.id) ? '#fff' : 'var(--text-secondary)',
+                      border: selectedShelfId === String(shelf.id) ? 'none' : '1px solid var(--border-primary)',
+                      boxShadow: selectedShelfId === String(shelf.id) ? '0 2px 8px rgba(139, 92, 246, 0.3)' : 'none',
+                    }}
+                  >
+                    <FolderIcon className="w-3.5 h-3.5" />
+                    {shelf.shelf_name}
+                    {shelfProductCounts[shelf.id] > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-md text-xs font-bold" style={{
+                        background: selectedShelfId === String(shelf.id) ? 'rgba(255,255,255,0.2)' : 'var(--bg-surface)',
+                        color: selectedShelfId === String(shelf.id) ? '#fff' : 'var(--text-muted)',
+                      }}>
+                        {shelfProductCounts[shelf.id]}
+                      </span>
+                    )}
+                  </button>
+                ))}
+
+                {/* Tab: Chưa xếp kệ */}
+                {shelfProductCounts.none > 0 && (
+                  <button
+                    onClick={() => setSelectedShelfId('none')}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0"
+                    style={{
+                      background: selectedShelfId === 'none'
+                        ? 'linear-gradient(135deg, #6b7280, #4b5563)'
+                        : 'var(--bg-inset)',
+                      color: selectedShelfId === 'none' ? '#fff' : 'var(--text-muted)',
+                      border: selectedShelfId === 'none' ? 'none' : '1px solid var(--border-primary)',
+                      boxShadow: selectedShelfId === 'none' ? '0 2px 8px rgba(107, 114, 128, 0.3)' : 'none',
+                    }}
+                  >
+                    <PackageIcon className="w-3.5 h-3.5" />
+                    Chưa xếp kệ
+                    <span className="px-1.5 py-0.5 rounded-md text-xs font-bold" style={{
+                      background: selectedShelfId === 'none' ? 'rgba(255,255,255,0.2)' : 'var(--bg-surface)',
+                      color: selectedShelfId === 'none' ? '#fff' : 'var(--text-muted)',
+                    }}>
+                      {shelfProductCounts.none}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Product grid */}
           {filteredProducts.length === 0 ? (
             <div className="text-center py-16">
@@ -478,6 +599,13 @@ export default function Checkout() {
                       style={{ color: isOutOfStock ? 'var(--text-muted)' : inCart ? 'var(--success)' : 'var(--text-secondary)' }}>
                       {formatPrice(product.price)}
                     </p>
+                    {product.shelf && selectedShelfId === 'all' && (
+                      <p className="text-[10px] mt-0.5 truncate flex items-center gap-0.5"
+                        style={{ color: 'var(--text-muted)' }}>
+                        <FolderIcon className="w-2.5 h-2.5 flex-shrink-0" />
+                        {product.shelf.shelf_name}
+                      </p>
+                    )}
                     <p className="text-xs mt-0.5"
                       style={{
                         color: isOutOfStock ? 'var(--danger)' : remaining <= 3 ? 'var(--warning)' : 'var(--text-muted)',
