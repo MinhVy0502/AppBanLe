@@ -59,10 +59,13 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // --- Validate unit_type ---
-    const validUnitTypes = ['le', 'loc', 'thung', 'hop'];
-    const finalUnitType = unit_type && validUnitTypes.includes(unit_type) ? unit_type : 'le';
-    const finalUnitsPer = units_per_pack && Number(units_per_pack) > 0 ? Number(units_per_pack) : 1;
+    // --- Validate unit_type & packaging ---
+    const LE_UNIT_TYPES = ['le', 'chai', 'lon', 'goi', 'hop', 'bich', 'bo', 'hu'];
+    const PACK_UNIT_TYPES = ['day', 'thung', 'loc', 'cay'];
+    const validUnitTypes = [...LE_UNIT_TYPES, ...PACK_UNIT_TYPES];
+    const finalUnitType = unit_type && validUnitTypes.includes(unit_type) ? unit_type : 'chai';
+    const isLe = LE_UNIT_TYPES.includes(finalUnitType);
+    const finalUnitsPer = !isLe && units_per_pack && Number(units_per_pack) > 0 ? Number(units_per_pack) : 1;
 
     // --- Nếu có shelf_id, kiểm tra kệ có thuộc cửa hàng này không ---
     if (shelf_id) {
@@ -135,12 +138,16 @@ router.put('/:id', async (req, res) => {
     if (cost_price !== undefined) product.cost_price = Number(cost_price);
     if (stock !== undefined) product.stock = Number(stock);
 
+    const LE_UNIT_TYPES = ['le', 'chai', 'lon', 'goi', 'hop', 'bich', 'bo', 'hu'];
+    const PACK_UNIT_TYPES = ['day', 'thung', 'loc', 'cay'];
+    const validUnitTypes = [...LE_UNIT_TYPES, ...PACK_UNIT_TYPES];
+
     if (unit_type !== undefined) {
-      const validUnitTypes = ['le', 'loc', 'thung', 'hop'];
-      product.unit_type = validUnitTypes.includes(unit_type) ? unit_type : 'le';
+      product.unit_type = validUnitTypes.includes(unit_type) ? unit_type : 'chai';
     }
-    if (units_per_pack !== undefined) {
-      product.units_per_pack = product.unit_type === 'le' ? 1 : (Number(units_per_pack) > 0 ? Number(units_per_pack) : 1);
+    if (units_per_pack !== undefined || unit_type !== undefined) {
+      const isLe = LE_UNIT_TYPES.includes(product.unit_type);
+      product.units_per_pack = isLe ? 1 : (Number(units_per_pack) > 0 ? Number(units_per_pack) : (product.units_per_pack > 1 ? product.units_per_pack : 1));
     }
 
     await product.save();

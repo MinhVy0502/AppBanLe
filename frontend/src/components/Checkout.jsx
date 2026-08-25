@@ -77,10 +77,15 @@ const formatPrice = (price) =>
   new Intl.NumberFormat('vi-VN').format(price) + ' ₫';
 
 /* Quy cách đóng gói — labels */
-const UNIT_LABELS = { le: 'Lẻ', loc: 'Lốc', thung: 'Thùng', hop: 'Hộp' };
+const UNIT_LABELS = {
+  chai: 'Chai', lon: 'Lon', goi: 'Gói', hop: 'Hộp', bich: 'Bịch', bo: 'Bó', hu: 'Hũ',
+  day: 'Dây', thung: 'Thùng', loc: 'Lốc', cay: 'Cây', le: 'Lẻ',
+};
+const LE_TYPES = ['chai', 'lon', 'goi', 'hop', 'bich', 'bo', 'hu', 'le'];
+const isLeType = (type) => LE_TYPES.includes(type);
 const getUnitBadge = (p) => {
-  if (!p.unit_type || p.unit_type === 'le') return null;
-  const label = UNIT_LABELS[p.unit_type] || 'Lẻ';
+  if (!p.unit_type || isLeType(p.unit_type)) return null;
+  const label = UNIT_LABELS[p.unit_type] || '';
   const qty = p.units_per_pack > 1 ? ` ${p.units_per_pack}` : '';
   return `${label}${qty}`;
 };

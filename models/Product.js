@@ -48,16 +48,16 @@ const Product = sequelize.define('Product', {
     defaultValue: 0,
   },
   unit_type: {
-    type: DataTypes.STRING(10),
+    type: DataTypes.STRING(20),
     allowNull: false,
-    defaultValue: 'le',
-    comment: 'Quy cách đóng gói: le (Lẻ), loc (Lốc), thung (Thùng)',
+    defaultValue: 'chai',
+    comment: 'Quy cách đóng gói: chai, lon, goi, hop, bich, bo, hu, day, thung, loc, cay, le',
   },
   units_per_pack: {
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 1,
-    comment: 'Số đơn vị lẻ trong 1 gói. VD: Lốc 6 → 6, Thùng 24 → 24',
+    comment: 'Số đơn vị lẻ trong 1 gói đóng gói. VD: Lốc 6 → 6, Thùng 24 → 24, Dây 12 → 12',
   },
 }, {
   tableName: 'Product',

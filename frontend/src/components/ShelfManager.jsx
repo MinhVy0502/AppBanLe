@@ -77,18 +77,17 @@ const formatPrice = (price) =>
   new Intl.NumberFormat('vi-VN').format(price) + ' ₫';
 
 /* Quy cách đóng gói — labels & helpers */
-const UNIT_LABELS = { le: 'Lẻ', loc: 'Lốc', thung: 'Thùng', hop: 'Hộp' };
+const UNIT_LABELS = {
+  chai: 'Chai', lon: 'Lon', goi: 'Gói', hop: 'Hộp', bich: 'Bịch', bo: 'Bó', hu: 'Hũ',
+  day: 'Dây', thung: 'Thùng', loc: 'Lốc', cay: 'Cây', le: 'Lẻ',
+};
+const LE_TYPES = ['chai', 'lon', 'goi', 'hop', 'bich', 'bo', 'hu', 'le'];
+const isLeType = (type) => LE_TYPES.includes(type);
 const getUnitBadge = (p) => {
-  if (!p.unit_type || p.unit_type === 'le') return null;
-  const label = UNIT_LABELS[p.unit_type] || 'Lẻ';
+  if (!p.unit_type || isLeType(p.unit_type)) return null;
+  const label = UNIT_LABELS[p.unit_type] || '';
   const qty = p.units_per_pack > 1 ? ` ${p.units_per_pack}` : '';
   return `${label}${qty}`;
-};
-
-/** Kiểm tra shelf có phải ngành hàng nước ngọt không (dựa vào tên kệ) */
-const isSoftDrinkShelf = (shelfName) => {
-  if (!shelfName) return false;
-  return shelfName.toLowerCase().includes('nước ngọt');
 };
 
 /* ===================================================================
@@ -110,7 +109,7 @@ export default function ShelfManager() {
   // -- Thêm / Sửa / Xóa sản phẩm --
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [productForm, setProductForm] = useState({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'le', units_per_pack: '' });
+  const [productForm, setProductForm] = useState({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'chai', units_per_pack: '' });
   const [creatingProduct, setCreatingProduct] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [deletingShelfId, setDeletingShelfId] = useState(null);
@@ -211,8 +210,8 @@ export default function ShelfManager() {
         price: Number(price),
         cost_price: cost_price !== '' ? Number(cost_price) : 0,
         stock: stock !== '' ? Number(stock) : 0,
-        unit_type: unit_type || 'le',
-        units_per_pack: unit_type !== 'le' && units_per_pack ? Number(units_per_pack) : 1,
+        unit_type: unit_type || 'chai',
+        units_per_pack: !isLeType(unit_type) && units_per_pack ? Number(units_per_pack) : 1,
       };
 
       if (editingProduct) {
@@ -224,7 +223,7 @@ export default function ShelfManager() {
         const res = await api.post('/products', payload);
         setAllProducts((prev) => [...prev, res.data]);
       }
-      setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'le', units_per_pack: '' });
+      setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'chai', units_per_pack: '' });
       setEditingProduct(null);
       setShowProductModal(false);
     } catch (err) {
@@ -240,15 +239,15 @@ export default function ShelfManager() {
       price: String(product.price),
       cost_price: product.cost_price ? String(product.cost_price) : '',
       stock: String(product.stock),
-      unit_type: product.unit_type || 'le',
-      units_per_pack: product.units_per_pack > 1 ? String(product.units_per_pack) : '',
+      unit_type: product.unit_type || 'chai',
+      units_per_pack: !isLeType(product.unit_type) && product.units_per_pack > 1 ? String(product.units_per_pack) : '',
     });
     setShowProductModal(true);
   };
 
   const openAddProduct = () => {
     setEditingProduct(null);
-    setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'le', units_per_pack: '' });
+    setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'chai', units_per_pack: '' });
     setShowProductModal(true);
   };
 
@@ -778,20 +777,29 @@ export default function ShelfManager() {
                     const val = e.target.value;
                     setProductForm({
                       ...productForm, unit_type: val,
-                      units_per_pack: val === 'le' ? '' : (productForm.units_per_pack || (val === 'loc' ? '6' : val === 'hop' ? '10' : '24')),
+                      units_per_pack: isLeType(val) ? '' : (productForm.units_per_pack || (val === 'loc' ? '6' : val === 'thung' ? '24' : val === 'day' ? '12' : val === 'cay' ? '10' : '6')),
                     });
                   }}
                   className="w-full input-themed cursor-pointer"
                 >
-                  <option value="le">Lẻ — 1 cái / 1 gói / 1 lon</option>
-                  {activeShelf && isSoftDrinkShelf(activeShelf.shelf_name) && (
-                    <option value="loc">Lốc — VD: Lốc 6 lon (chỉ Nước ngọt)</option>
-                  )}
-                  <option value="thung">Thùng — VD: Thùng 24 gói</option>
-                  <option value="hop">Hộp — VD: Hộp 10 bao (thuốc lá...)</option>
+                  <optgroup label="Lẻ">
+                    <option value="chai">Chai</option>
+                    <option value="lon">Lon</option>
+                    <option value="goi">Gói</option>
+                    <option value="hop">Hộp</option>
+                    <option value="bich">Bịch</option>
+                    <option value="bo">Bó</option>
+                    <option value="hu">Hũ</option>
+                  </optgroup>
+                  <optgroup label="Đóng gói">
+                    <option value="day">Dây</option>
+                    <option value="thung">Thùng</option>
+                    <option value="loc">Lốc</option>
+                    <option value="cay">Cây</option>
+                  </optgroup>
                 </select>
 
-                {productForm.unit_type !== 'le' && (
+                {!isLeType(productForm.unit_type) && (
                   <div className="mt-3 animate-fade-in">
                     <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                       Số lượng lẻ trong 1 {UNIT_LABELS[productForm.unit_type].toLowerCase()}
@@ -800,7 +808,7 @@ export default function ShelfManager() {
                     <div className="flex items-center gap-2">
                       <input type="number" min="1" value={productForm.units_per_pack}
                         onChange={(e) => setProductForm({ ...productForm, units_per_pack: e.target.value })}
-                        placeholder={productForm.unit_type === 'loc' ? '6' : productForm.unit_type === 'hop' ? '10' : '24'}
+                        placeholder={productForm.unit_type === 'loc' ? '6' : productForm.unit_type === 'thung' ? '24' : productForm.unit_type === 'day' ? '12' : productForm.unit_type === 'cay' ? '10' : '6'}
                         className="w-28 input-themed" />
                       <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                         đơn vị lẻ / {UNIT_LABELS[productForm.unit_type].toLowerCase()}
@@ -817,7 +825,7 @@ export default function ShelfManager() {
                   <span className="text-sm" style={{ color: 'var(--success)' }}>Giá hiển thị:</span>
                   <span className="font-bold" style={{ color: 'var(--success)' }}>
                     {formatPrice(Number(productForm.price))}
-                    {productForm.unit_type !== 'le' && (
+                    {!isLeType(productForm.unit_type) && (
                       <span className="font-normal ml-1" style={{ opacity: 0.7 }}>
                         / {UNIT_LABELS[productForm.unit_type].toLowerCase()}
                         {productForm.units_per_pack ? ` ${productForm.units_per_pack}` : ''}
@@ -831,7 +839,7 @@ export default function ShelfManager() {
             <div className="px-6 py-4 flex items-center justify-end gap-2.5"
                  style={{ borderTop: '1px solid var(--border-primary)', background: 'var(--bg-inset)' }}>
               <button
-                onClick={() => { setShowProductModal(false); setEditingProduct(null); setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'le', units_per_pack: '' }); }}
+                onClick={() => { setShowProductModal(false); setEditingProduct(null); setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'chai', units_per_pack: '' }); }}
                 className="btn-secondary">Hủy</button>
               <button onClick={createProduct}
                 disabled={creatingProduct || !productForm.product_name.trim() || productForm.price === '' || Number(productForm.price) < 0}
