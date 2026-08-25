@@ -62,7 +62,7 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
 app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
 
 // SPA fallback — mọi route không phải API → trả về index.html
-app.get('*', (req, res) => {
+app.get('{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'dist', 'index.html'));
 });
 
