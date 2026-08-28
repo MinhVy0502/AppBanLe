@@ -519,13 +519,15 @@ export default function ShelfManager() {
         </div>
       )}
 
-      {/* ==================== EXPANDED SHELF PANEL ==================== */}
+      {/* ==================== SHELF DETAIL MODAL ==================== */}
       {activeShelf && (
-        <div className="mt-6 animate-shelf-open">
-          <div className="rounded-2xl overflow-hidden"
-               style={{ background: 'var(--card-bg)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-xl)' }}>
-            {/* Panel header */}
-            <div className="px-6 py-4 flex items-center justify-between"
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setActiveShelfId(null)}>
+          <div className="absolute inset-0 modal-overlay" />
+          <div className="relative rounded-2xl w-full max-w-2xl overflow-hidden animate-modal-in"
+               style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+               onClick={(e) => e.stopPropagation()}>
+            {/* Modal header */}
+            <div className="px-6 py-4 flex items-center justify-between flex-shrink-0"
                  style={{ background: activeTheme.gradient }}>
               <div className="flex items-center gap-3 text-white">
                 <FolderOpenIcon className="w-6 h-6" />
@@ -550,8 +552,8 @@ export default function ShelfManager() {
               </div>
             </div>
 
-            {/* Product list */}
-            <div className="p-5">
+            {/* Product list — scrollable */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-5">
               {getProductsOnShelf(activeShelfId).length === 0 ? (
                 <div className="text-center py-12">
                   <PackageIcon className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
