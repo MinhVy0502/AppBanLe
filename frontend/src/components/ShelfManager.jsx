@@ -521,7 +521,7 @@ export default function ShelfManager() {
 
       {/* ==================== SHELF DETAIL MODAL ==================== */}
       {activeShelf && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 animate-fade-in" onClick={() => setActiveShelfId(null)}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center sm:p-4 animate-fade-in" onClick={() => setActiveShelfId(null)}>
           <div className="absolute inset-0 modal-overlay" />
           <div className="relative sm:rounded-2xl w-full sm:max-w-2xl overflow-hidden animate-modal-in sm:max-h-[85vh]"
                style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', height: '100%' }}
@@ -670,7 +670,7 @@ export default function ShelfManager() {
 
       {/* ==================== ADD PRODUCTS MODAL ==================== */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowAddModal(false)}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowAddModal(false)}>
           <div className="absolute inset-0 modal-overlay" />
           <div className="relative rounded-2xl w-full max-w-lg overflow-hidden animate-modal-in"
                style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
@@ -757,7 +757,7 @@ export default function ShelfManager() {
 
       {/* ==================== MODAL THÊM SẢN PHẨM MỚI ==================== */}
       {showProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowProductModal(false)}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowProductModal(false)}>
           <div className="absolute inset-0 modal-overlay" />
           <div className="relative rounded-2xl w-full max-w-md overflow-hidden animate-modal-in"
                style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
