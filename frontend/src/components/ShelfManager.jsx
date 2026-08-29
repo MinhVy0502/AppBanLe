@@ -521,15 +521,11 @@ export default function ShelfManager() {
 
       {/* ==================== SHELF DETAIL MODAL ==================== */}
       {activeShelf && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 animate-fade-in" onClick={() => setActiveShelfId(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 animate-fade-in" onClick={() => setActiveShelfId(null)}>
           <div className="absolute inset-0 modal-overlay" />
-          <div className="relative rounded-t-2xl sm:rounded-2xl w-full max-w-2xl overflow-hidden animate-modal-in"
-               style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)', maxHeight: '95vh', height: 'auto', display: 'flex', flexDirection: 'column' }}
+          <div className="relative sm:rounded-2xl w-full sm:max-w-2xl overflow-hidden animate-modal-in sm:max-h-[85vh]"
+               style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', height: '100%' }}
                onClick={(e) => e.stopPropagation()}>
-            {/* Drag handle for mobile */}
-            <div className="sm:hidden flex justify-center pt-2 pb-1 flex-shrink-0" style={{ background: activeTheme.gradient }}>
-              <div className="w-10 h-1 rounded-full bg-white/40" />
-            </div>
             {/* Modal header */}
             <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0"
                  style={{ background: activeTheme.gradient }}>
