@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 
 /* ===================================================================
@@ -347,8 +348,8 @@ export default function Customers() {
       </div>
 
       {/* ====== MODAL THÊM/SỬA KHÁCH HÀNG ====== */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowModal(false)}>
+      {showModal && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in" onClick={() => setShowModal(false)}>
           <div className="absolute inset-0 modal-overlay" />
           <div className="relative rounded-2xl w-full max-w-md overflow-hidden animate-modal-in"
                style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
@@ -390,12 +391,13 @@ export default function Customers() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ====== MODAL THANH TOÁN NỢ ====== */}
-      {showPayModal && payCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowPayModal(false)}>
+      {showPayModal && payCustomer && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in" onClick={() => setShowPayModal(false)}>
           <div className="absolute inset-0 modal-overlay" />
           <div className="relative rounded-2xl w-full max-w-sm overflow-hidden animate-modal-in"
                style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
@@ -443,7 +445,8 @@ export default function Customers() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

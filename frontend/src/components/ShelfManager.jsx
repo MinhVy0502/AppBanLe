@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 
 /* ===================================================================
@@ -520,16 +521,16 @@ export default function ShelfManager() {
       )}
 
       {/* ==================== SHELF DETAIL MODAL ==================== */}
-      {activeShelf && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center sm:p-4 animate-fade-in" onClick={() => setActiveShelfId(null)}>
+      {activeShelf && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2.5 sm:p-4 animate-fade-in" onClick={() => setActiveShelfId(null)}>
           <div className="absolute inset-0 modal-overlay" />
-          <div className="relative sm:rounded-2xl w-full sm:max-w-2xl overflow-hidden animate-modal-in sm:max-h-[85vh]"
-               style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', height: '100%' }}
+          <div className="relative rounded-2xl w-full sm:max-w-2xl overflow-hidden animate-modal-in flex flex-col max-h-[92vh] sm:max-h-[85vh]"
+               style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
                onClick={(e) => e.stopPropagation()}>
             {/* Modal header */}
             <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between flex-shrink-0"
                  style={{ background: activeTheme.gradient }}>
-              <div className="flex items-center gap-2 sm:gap-3 text-white min-w-0 flex-1">
+              <div className="flex items-center gap-2 sm:gap-3 text-white min-w-0 flex-1 mr-2">
                 <FolderOpenIcon className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
                 <h2 className="text-base sm:text-lg font-bold truncate">{activeShelf.shelf_name}</h2>
                 <span className="bg-white/20 backdrop-blur-sm px-2 sm:px-3 py-0.5 rounded-full text-xs sm:text-sm font-medium flex-shrink-0 whitespace-nowrap">
@@ -665,12 +666,13 @@ export default function ShelfManager() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ==================== ADD PRODUCTS MODAL ==================== */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowAddModal(false)}>
+      {showAddModal && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-fade-in" onClick={() => setShowAddModal(false)}>
           <div className="absolute inset-0 modal-overlay" />
           <div className="relative rounded-2xl w-full max-w-lg overflow-hidden animate-modal-in"
                style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
@@ -752,12 +754,13 @@ export default function ShelfManager() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ==================== MODAL THÊM SẢN PHẨM MỚI ==================== */}
-      {showProductModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowProductModal(false)}>
+      {showProductModal && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-fade-in" onClick={() => setShowProductModal(false)}>
           <div className="absolute inset-0 modal-overlay" />
           <div className="relative rounded-2xl w-full max-w-md overflow-hidden animate-modal-in"
                style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
@@ -893,7 +896,8 @@ export default function ShelfManager() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

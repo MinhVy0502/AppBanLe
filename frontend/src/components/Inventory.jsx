@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 
 /* ===================================================================
@@ -526,9 +527,9 @@ export default function Inventory() {
       )}
 
       {/* ==================== MODAL THÊM LÔ HÀNG ==================== */}
-      {showBatchModal && (
+      {showBatchModal && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in"
           onClick={() => setShowBatchModal(false)}
         >
           <div className="absolute inset-0 modal-overlay" />
@@ -668,7 +669,8 @@ export default function Inventory() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

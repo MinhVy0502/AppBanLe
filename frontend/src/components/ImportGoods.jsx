@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 
 /* ===================================================================
@@ -643,8 +644,8 @@ export default function ImportGoods() {
       )}
 
       {/* ===== MODAL — NHẬP HÀNG MỚI ===== */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      {showModal && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
              style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
              onClick={() => setShowModal(false)}>
           <div className="w-full max-w-lg rounded-2xl overflow-hidden animate-fade-in-up"
@@ -802,7 +803,8 @@ export default function ImportGoods() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
