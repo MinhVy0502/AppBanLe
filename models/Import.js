@@ -41,13 +41,30 @@ const Import = sequelize.define('Import', {
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 0,
-    comment: 'So luong nhap',
+    comment: 'So luong nhap theo don vi nhap (VD: 10 thung)',
+  },
+  unit_name: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: 'Ten don vi nhap: Thung, Loc, Day, Cay, hoac null neu nhap theo don vi co so',
+  },
+  conversion_rate: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1,
+    comment: 'Ty le quy doi ra don vi co so (VD: 1 Thung = 24 lon -> 24)',
+  },
+  base_quantity: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'So luong quy doi ra don vi le co so (quantity * conversion_rate)',
   },
   unit_cost: {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false,
     defaultValue: 0,
-    comment: 'Gia nhap moi don vi',
+    comment: 'Gia nhap moi don vi nhap (VD: 216.000d/thung)',
   },
   total_cost: {
     type: DataTypes.DECIMAL(12, 2),

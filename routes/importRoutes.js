@@ -6,13 +6,13 @@ const router = express.Router();
 
 // ==================================================
 //  POST /api/imports — Tao phieu nhap hang moi
-//  Tu dong cong stock cho Product
+//  Tu dong quy doi sang don vi co so va cong stock cho Product
 // ==================================================
 router.post('/', async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const store_id = req.store_id;
-    const { product_id, supplier_name, quantity, unit_cost, note, import_date } = req.body;
+    const { product_id, supplier_name, quantity, unit_cost, note, import_date, unit_name, conversion_rate } = req.body;
 
     // Validate
     if (!product_id || !quantity || quantity <= 0) {
@@ -45,6 +45,8 @@ router.post('/', async (req, res) => {
       });
     }
 
+    const rate = Number(conversion_rate) > 0 ? Number(conversion_rate) : 1;
+    const baseQuantity = Number(quantity) * rate;
     const totalCost = Number(quantity) * Number(unit_cost);
 
     // Tao phieu nhap
@@ -53,26 +55,31 @@ router.post('/', async (req, res) => {
       product_id,
       supplier_name: supplier_name || null,
       quantity: Number(quantity),
+      unit_name: unit_name && String(unit_name).trim() ? String(unit_name).trim() : null,
+      conversion_rate: rate,
+      base_quantity: baseQuantity,
       unit_cost: Number(unit_cost),
       total_cost: totalCost,
       note: note || null,
       import_date: import_date || new Date().toISOString().split('T')[0],
     }, { transaction: t });
 
-    // Cong stock cho san pham
-    product.stock += Number(quantity);
+    // Cong stock cho san pham (theo don vi co so le)
+    product.stock += baseQuantity;
+    // Cap nhat gia von le co so (gia nhap moi don vi dong goi / ty le quy doi)
+    product.cost_price = Number((Number(unit_cost) / rate).toFixed(2));
     await product.save({ transaction: t });
 
     await t.commit();
 
     // Fetch lai voi product info
     const importWithProduct = await Import.findByPk(newImport.id, {
-      include: [{ model: Product, as: 'product', attributes: ['id', 'product_name', 'price', 'cost_price', 'stock'] }],
+      include: [{ model: Product, as: 'product', attributes: ['id', 'product_name', 'price', 'cost_price', 'stock', 'unit_type'] }],
     });
 
     return res.status(201).json({
       success: true,
-      message: `Nhap hang thanh cong! Ton kho "${product.product_name}" tang len ${product.stock}.`,
+      message: `Nhap hang thanh cong! Ton kho "${product.product_name}" tang len ${product.stock} ${product.unit_type || 'don vi'}.`,
       data: importWithProduct,
     });
 
@@ -221,7 +228,8 @@ router.delete('/:id', async (req, res) => {
     });
 
     if (product) {
-      product.stock = Math.max(0, product.stock - importRecord.quantity);
+      const deductQty = importRecord.base_quantity || (importRecord.quantity * (importRecord.conversion_rate || 1));
+      product.stock = Math.max(0, product.stock - deductQty);
       await product.save({ transaction: t });
     }
 

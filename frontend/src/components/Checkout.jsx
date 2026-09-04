@@ -78,16 +78,32 @@ const formatPrice = (price) =>
 
 /* Quy cách đóng gói — labels */
 const UNIT_LABELS = {
-  chai: 'Chai', lon: 'Lon', goi: 'Gói', hop: 'Hộp', bich: 'Bịch', bo: 'Bó', hu: 'Hũ',
-  day: 'Dây', thung: 'Thùng', loc: 'Lốc', cay: 'Cây', le: 'Lẻ',
+  lon: 'Lon', chai: 'Chai', goi: 'Gói', hop: 'Hộp', bich: 'Bịch', bo: 'Bó', hu: 'Hũ',
+  cai: 'Cái', dieu: 'Điếu', vien: 'Viên', cuon: 'Cuộn', cay: 'Cây', day: 'Dây',
+  thung: 'Thùng', loc: 'Lốc', vi: 'Vỉ', bao: 'Bao', ket: 'Két', le: 'Lẻ',
 };
-const LE_TYPES = ['chai', 'lon', 'goi', 'hop', 'bich', 'bo', 'hu', 'le'];
-const isLeType = (type) => LE_TYPES.includes(type);
-const getUnitBadge = (p) => {
-  if (!p.unit_type || isLeType(p.unit_type)) return null;
-  const label = UNIT_LABELS[p.unit_type] || '';
-  const qty = p.units_per_pack > 1 ? ` ${p.units_per_pack}` : '';
-  return `${label}${qty}`;
+const getBaseUnitLabel = (type) => UNIT_LABELS[type] || type || 'Đơn vị';
+const getUnitBadge = (type) => {
+  if (!type) return '';
+  const unit = typeof type === 'object' ? type.unit_type : type;
+  return getBaseUnitLabel(unit);
+};
+
+const getStockDisplay = (product) => {
+  const baseLabel = getBaseUnitLabel(product.unit_type).toLowerCase();
+  const thungUnit = (product.units || []).find(u => u.unit_name.toLowerCase().includes('thùng') || u.conversion_rate >= 12) || (product.units && product.units[0]);
+
+  if (product.allow_retail === false && thungUnit && thungUnit.conversion_rate > 1) {
+    const numPacks = Math.floor(product.stock / thungUnit.conversion_rate);
+    return `${numPacks} ${thungUnit.unit_name.toLowerCase()}`;
+  }
+
+  if (thungUnit && thungUnit.conversion_rate > 1 && product.stock >= thungUnit.conversion_rate) {
+    const numPacks = Math.floor(product.stock / thungUnit.conversion_rate);
+    const numLe = product.stock % thungUnit.conversion_rate;
+    return `${product.stock} ${baseLabel} (~${numPacks} ${thungUnit.unit_name.toLowerCase()}${numLe > 0 ? ` ${numLe} lẻ` : ''})`;
+  }
+  return `${product.stock} ${baseLabel}`;
 };
 
 /* ===================================================================
@@ -98,7 +114,7 @@ export default function Checkout() {
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [shelves, setShelves] = useState([]);
-  const [cart, setCart] = useState([]); // [{ product, quantity }]
+  const [cart, setCart] = useState([]); // [{ cart_id, product, unit_name, conversion_rate, price, quantity }]
   const [search, setSearch] = useState('');
   const [selectedShelfId, setSelectedShelfId] = useState('all'); // 'all' | shelf id | 'none'
   const [loading, setLoading] = useState(true);
@@ -171,7 +187,7 @@ export default function Checkout() {
 
   // ---- Cart total ----
   const totalPrice = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [cart]);
 
   const totalItems = useMemo(() => {
@@ -179,37 +195,72 @@ export default function Checkout() {
   }, [cart]);
 
   // ---- Cart handlers ----
-  const addToCart = (product) => {
+  const addToCart = (product, unit = null) => {
+    const unitName = unit ? unit.unit_name : getBaseUnitLabel(product.unit_type);
+    const conversionRate = unit ? (Number(unit.conversion_rate) || 1) : 1;
+    const unitPrice = unit ? Number(unit.price) : Number(product.price);
+    const cartId = `${product.id}_${unitName}`;
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        if (existing.quantity >= product.stock) return prev;
-        return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
+      // Calculate current base quantity in cart for this product
+      const currentBaseInCart = prev
+        .filter((item) => item.product.id === product.id)
+        .reduce((sum, item) => sum + item.quantity * item.conversion_rate, 0);
+
+      if (currentBaseInCart + conversionRate > product.stock) {
+        return prev;
       }
-      if (product.stock <= 0) return prev;
-      return [...prev, { product, quantity: 1 }];
+
+      const existingIndex = prev.findIndex((item) => item.cart_id === cartId);
+      if (existingIndex > -1) {
+        const next = [...prev];
+        next[existingIndex] = {
+          ...next[existingIndex],
+          quantity: next[existingIndex].quantity + 1,
+        };
+        return next;
+      }
+
+      return [
+        ...prev,
+        {
+          cart_id: cartId,
+          product,
+          unit_name: unitName,
+          conversion_rate: conversionRate,
+          price: unitPrice,
+          quantity: 1,
+        },
+      ];
     });
   };
 
-  const updateQuantity = (productId, delta) => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.product.id !== productId) return item;
-          const newQty = item.quantity + delta;
-          if (newQty > item.product.stock) return item;
-          return { ...item, quantity: newQty };
+  const updateQuantity = (cartId, delta) => {
+    setCart((prev) => {
+      const item = prev.find((i) => i.cart_id === cartId);
+      if (!item) return prev;
+
+      if (delta > 0) {
+        const currentBaseInCart = prev
+          .filter((i) => i.product.id === item.product.id)
+          .reduce((sum, i) => sum + i.quantity * i.conversion_rate, 0);
+
+        if (currentBaseInCart + item.conversion_rate > item.product.stock) {
+          return prev;
+        }
+      }
+
+      return prev
+        .map((i) => {
+          if (i.cart_id !== cartId) return i;
+          return { ...i, quantity: i.quantity + delta };
         })
-        .filter((item) => item.quantity > 0)
-    );
+        .filter((i) => i.quantity > 0);
+    });
   };
 
-  const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  const removeFromCart = (cartId) => {
+    setCart((prev) => prev.filter((item) => item.cart_id !== cartId));
   };
 
   const clearCart = () => setCart([]);
@@ -224,8 +275,10 @@ export default function Checkout() {
         items: cart.map((item) => ({
           product_id: item.product.id,
           product_name: item.product.product_name,
-          price: item.product.price,
+          price: item.price,
           quantity: item.quantity,
+          unit_name: item.unit_name,
+          conversion_rate: item.conversion_rate,
         })),
       };
 
@@ -238,9 +291,10 @@ export default function Checkout() {
 
       setProducts((prev) =>
         prev.map((p) => {
-          const cartItem = cart.find((c) => c.product.id === p.id);
-          if (cartItem) {
-            return { ...p, stock: p.stock - cartItem.quantity };
+          const cartItemsForP = cart.filter((c) => c.product.id === p.id);
+          if (cartItemsForP.length > 0) {
+            const totalDeducted = cartItemsForP.reduce((sum, c) => sum + c.quantity * c.conversion_rate, 0);
+            return { ...p, stock: Math.max(0, p.stock - totalDeducted) };
           }
           return p;
         })
@@ -309,21 +363,22 @@ export default function Checkout() {
                 Chi tiết hóa đơn
               </h3>
               <div className="space-y-2.5">
-                {lastOrder.cart.map((item) => (
-                  <div key={item.product.id} className="flex items-center justify-between text-sm">
+                {lastOrder.cart.map((item, idx) => (
+                  <div key={item.cart_id || idx} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="truncate" style={{ color: 'var(--text-secondary)' }}>
-                        {item.product.product_name}
-                        {getUnitBadge(item.product) && (
-                          <span className="ml-1 text-[10px] font-semibold" style={{ color: 'var(--info)' }}>
-                            ({getUnitBadge(item.product)})
+                      <div className="truncate flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
+                        <span className="truncate font-medium">{item.product?.product_name || item.product_name}</span>
+                        {item.unit_name && (
+                          <span className="px-1.5 py-0.5 rounded text-[11px] font-bold flex-shrink-0"
+                                style={{ background: 'var(--brand-light)', color: 'var(--brand-primary)', border: '1px solid var(--brand-subtle)' }}>
+                            {item.unit_name}
                           </span>
                         )}
-                      </span>
-                      <span style={{ color: 'var(--text-muted)' }}>×{item.quantity}</span>
+                      </div>
+                      <span className="flex-shrink-0" style={{ color: 'var(--text-muted)' }}>×{item.quantity}</span>
                     </div>
-                    <span className="font-medium ml-4 flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
-                      {formatPrice(item.product.price * item.quantity)}
+                    <span className="font-bold ml-4 flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
+                      {formatPrice(item.price * item.quantity)}
                     </span>
                   </div>
                 ))}
@@ -517,35 +572,51 @@ export default function Checkout() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {filteredProducts.map((product, idx) => {
-                const inCart = cart.find((item) => item.product.id === product.id);
-                const cartQty = inCart ? inCart.quantity : 0;
-                const remaining = product.stock - cartQty;
+                const baseInCart = cart
+                  .filter((item) => item.product.id === product.id)
+                  .reduce((sum, item) => sum + item.quantity * item.conversion_rate, 0);
+                const totalItemsInCart = cart
+                  .filter((item) => item.product.id === product.id)
+                  .reduce((sum, item) => sum + item.quantity, 0);
+                const remaining = product.stock - baseInCart;
                 const isOutOfStock = product.stock <= 0;
                 const isMaxReached = remaining <= 0 && !isOutOfStock;
+                const hasUnits = Array.isArray(product.units) && product.units.length > 0;
+                const isOnlyPack = product.allow_retail === false && hasUnits;
+                const baseLabel = getBaseUnitLabel(product.unit_type);
+
                 return (
-                  <button
+                  <div
                     key={product.id}
-                    onClick={() => addToCart(product)}
-                    disabled={isOutOfStock || isMaxReached}
-                    className="relative text-left p-4 rounded-2xl transition-all duration-200 group animate-fade-in-up"
+                    onClick={() => {
+                      if (!isOutOfStock && !isMaxReached) {
+                        if (isOnlyPack) {
+                          addToCart(product, product.units[0]);
+                        } else if (!hasUnits) {
+                          addToCart(product);
+                        }
+                      }
+                    }}
+                    className="relative text-left p-3.5 sm:p-4 rounded-2xl transition-all duration-200 group animate-fade-in-up flex flex-col justify-between"
                     style={{
                       animationDelay: `${Math.min(idx * 0.02, 0.3)}s`,
                       background: isOutOfStock
                         ? 'var(--bg-inset)'
-                        : inCart
+                        : baseInCart > 0
                           ? 'var(--success-bg)'
                           : 'var(--card-bg)',
-                      border: `2px solid ${isOutOfStock
+                      border: `2px solid ${
+                        isOutOfStock
                           ? 'var(--border-primary)'
                           : isMaxReached
                             ? 'var(--warning)'
-                            : inCart
+                            : baseInCart > 0
                               ? 'var(--success)'
                               : 'var(--card-border)'
-                        }`,
+                      }`,
                       opacity: isOutOfStock ? 0.6 : 1,
-                      cursor: isOutOfStock || isMaxReached ? 'not-allowed' : 'pointer',
-                      boxShadow: inCart ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'var(--shadow-sm)',
+                      cursor: isOutOfStock || isMaxReached ? 'default' : (isOnlyPack || !hasUnits) ? 'pointer' : 'default',
+                      boxShadow: baseInCart > 0 ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'var(--shadow-sm)',
                     }}
                     onMouseEnter={e => {
                       if (!isOutOfStock && !isMaxReached) {
@@ -555,20 +626,20 @@ export default function Checkout() {
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = inCart ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'var(--shadow-sm)';
+                      e.currentTarget.style.boxShadow = baseInCart > 0 ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'var(--shadow-sm)';
                     }}
                   >
                     {/* Badge số lượng trong giỏ */}
-                    {inCart && (
-                      <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-md animate-bounce-in"
+                    {totalItemsInCart > 0 && (
+                      <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-md animate-bounce-in z-10"
                         style={{ background: 'var(--success)' }}>
-                        {inCart.quantity}
+                        {totalItemsInCart}
                       </span>
                     )}
 
                     {/* Overlay hết hàng */}
                     {isOutOfStock && (
-                      <div className="absolute inset-0 flex items-center justify-center rounded-2xl">
+                      <div className="absolute inset-0 flex items-center justify-center rounded-2xl pointer-events-none z-10">
                         <span className="text-white text-xs font-bold px-3 py-1 rounded-lg shadow-md"
                           style={{ background: 'var(--danger)', transform: 'rotate(-12deg)' }}>
                           HẾT HÀNG
@@ -576,49 +647,113 @@ export default function Checkout() {
                       </div>
                     )}
 
-                    {/* Icon */}
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-colors"
-                      style={{
-                        background: isOutOfStock ? 'var(--bg-surface)' : inCart ? 'var(--success-light)' : 'var(--bg-inset)',
-                      }}>
-                      <PackageIcon className="w-5 h-5"
-                        style={{ color: isOutOfStock ? 'var(--text-muted)' : inCart ? 'var(--success)' : 'var(--text-muted)' }} />
+                    <div>
+                      {/* Icon & Category */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
+                          style={{
+                            background: isOutOfStock ? 'var(--bg-surface)' : baseInCart > 0 ? 'var(--success-light)' : 'var(--bg-inset)',
+                          }}>
+                          <PackageIcon className="w-4 h-4"
+                            style={{ color: isOutOfStock ? 'var(--text-muted)' : baseInCart > 0 ? 'var(--success)' : 'var(--text-muted)' }} />
+                        </div>
+                        {product.shelf && selectedShelfId === 'all' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5"
+                            style={{ background: 'var(--bg-inset)', color: 'var(--text-muted)' }}>
+                            <FolderIcon className="w-2.5 h-2.5" />
+                            {product.shelf.shelf_name}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <p className="font-semibold text-sm truncate leading-tight"
+                        style={{ color: isOutOfStock ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+                        {product.product_name}
+                      </p>
+
+                      {/* Price */}
+                      {isOnlyPack ? (
+                        <p className="font-bold text-sm mt-1"
+                          style={{ color: isOutOfStock ? 'var(--text-muted)' : baseInCart > 0 ? 'var(--success)' : 'var(--brand-primary)' }}>
+                          {formatPrice(product.units[0].price)} <span className="text-xs font-normal text-muted">/{product.units[0].unit_name.toLowerCase()}</span>
+                          <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded font-bold inline-block"
+                                style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-light)' }}>
+                            Chỉ bán sỉ
+                          </span>
+                        </p>
+                      ) : (
+                        <p className="font-bold text-sm mt-1"
+                          style={{ color: isOutOfStock ? 'var(--text-muted)' : baseInCart > 0 ? 'var(--success)' : 'var(--brand-primary)' }}>
+                          {formatPrice(product.price)} <span className="text-xs font-normal text-muted">/{baseLabel.toLowerCase()}</span>
+                        </p>
+                      )}
+
+                      {/* Tồn kho diễn giải */}
+                      <p className="text-[11px] mt-1"
+                        style={{
+                          color: isOutOfStock ? 'var(--danger)' : remaining <= 5 ? 'var(--warning)' : 'var(--text-muted)',
+                          fontWeight: isOutOfStock || remaining <= 5 ? 600 : 400,
+                        }}>
+                        {isOutOfStock ? 'Hết hàng' : `Kho: ${getStockDisplay({ ...product, stock: remaining })}`}
+                      </p>
                     </div>
 
-                    {/* Info */}
-                    <p className="font-medium text-sm truncate leading-tight"
-                      style={{ color: isOutOfStock ? 'var(--text-muted)' : 'var(--text-primary)' }}>
-                      {product.product_name}
-                    </p>
-                    {getUnitBadge(product) && (
-                      <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded mt-1"
-                        style={{
-                          background: isOutOfStock ? 'var(--bg-surface)' : 'var(--info-bg)',
-                          color: isOutOfStock ? 'var(--text-muted)' : 'var(--info)',
-                          border: isOutOfStock ? 'none' : '1px solid var(--info-light)',
-                        }}>
-                        <PackageIcon className="w-3 h-3 mr-0.5" /> {getUnitBadge(product)}
-                      </span>
+                    {/* Nút chọn nhanh đơn vị */}
+                    {hasUnits && !isOutOfStock && (
+                      <div className="mt-2.5 pt-2 border-t flex flex-col gap-1.5"
+                           style={{ borderColor: 'var(--border-secondary)' }}
+                           onClick={(e) => e.stopPropagation()}>
+                        {!isOnlyPack && (
+                          <button
+                            type="button"
+                            onClick={() => addToCart(product)}
+                            disabled={remaining < 1}
+                            className="w-full text-xs font-bold py-1.5 px-2.5 rounded-lg text-left flex items-center justify-between transition-all cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ background: 'var(--brand-primary)', color: '#fff' }}
+                          >
+                            <span>Bán lẻ ({baseLabel.toLowerCase()})</span>
+                            <span>{formatPrice(product.price)}</span>
+                          </button>
+                        )}
+                        {product.units.map((u) => {
+                          const canAdd = remaining >= u.conversion_rate;
+                          return (
+                            <button
+                              key={u.id || u.unit_name}
+                              type="button"
+                              onClick={() => {
+                                if (canAdd) {
+                                  addToCart(product, u);
+                                } else {
+                                  alert(`Kho chỉ còn ${remaining} ${baseLabel.toLowerCase()}, không đủ ${u.conversion_rate} ${baseLabel.toLowerCase()} để bán 1 ${u.unit_name}. Vui lòng vào tab "Nhập hàng" hoặc "Kệ hàng" để cập nhật tồn kho.`);
+                                }
+                              }}
+                              className={`w-full text-xs font-semibold py-1.5 px-2.5 rounded-lg text-left flex items-center justify-between transition-all cursor-pointer ${
+                                canAdd ? 'hover:opacity-90' : 'opacity-70 hover:opacity-100'
+                              }`}
+                              style={{
+                                background: canAdd ? (isOnlyPack ? 'var(--brand-primary)' : 'var(--bg-surface)') : 'var(--bg-inset)',
+                                color: canAdd ? (isOnlyPack ? '#fff' : 'var(--text-primary)') : 'var(--text-muted)',
+                                border: canAdd ? (isOnlyPack ? 'none' : '1px solid var(--border-primary)') : '1px dashed var(--border-secondary)',
+                              }}
+                              title={!canAdd ? `Kho còn ${remaining}, thiếu ${u.conversion_rate - remaining} để bán 1 ${u.unit_name}` : ''}
+                            >
+                              <div className="truncate flex items-center gap-1">
+                                <span>📦 {u.unit_name} ({u.conversion_rate})</span>
+                                {!canAdd && (
+                                  <span className="text-[10px] font-bold text-amber-500">
+                                    ({remaining}/{u.conversion_rate})
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-bold flex-shrink-0">{formatPrice(u.price)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
-                    <p className="font-bold text-sm mt-1"
-                      style={{ color: isOutOfStock ? 'var(--text-muted)' : inCart ? 'var(--success)' : 'var(--text-secondary)' }}>
-                      {formatPrice(product.price)}
-                    </p>
-                    {product.shelf && selectedShelfId === 'all' && (
-                      <p className="text-[10px] mt-0.5 truncate flex items-center gap-0.5"
-                        style={{ color: 'var(--text-muted)' }}>
-                        <FolderIcon className="w-2.5 h-2.5 flex-shrink-0" />
-                        {product.shelf.shelf_name}
-                      </p>
-                    )}
-                    <p className="text-xs mt-0.5"
-                      style={{
-                        color: isOutOfStock ? 'var(--danger)' : remaining <= 3 ? 'var(--warning)' : 'var(--text-muted)',
-                        fontWeight: isOutOfStock || remaining <= 3 ? 600 : 400,
-                      }}>
-                      {isOutOfStock ? 'Hết hàng' : isMaxReached ? `Đã chọn hết (${product.stock})` : `Tồn: ${remaining}/${product.stock}`}
-                    </p>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -667,7 +802,7 @@ export default function Checkout() {
                 <div className="p-3 space-y-2">
                   {cart.map((item) => (
                     <div
-                      key={item.product.id}
+                      key={item.cart_id}
                       className="flex items-center gap-3 p-3 rounded-xl transition-colors animate-fade-in group/cart"
                       style={{ background: 'var(--bg-inset)' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface-hover)'}
@@ -677,27 +812,30 @@ export default function Checkout() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                           {item.product.product_name}
-                          {getUnitBadge(item.product) && (
-                            <span className="ml-1 text-[10px] font-semibold px-1 py-0.5 rounded"
-                              style={{ background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid var(--info-light)' }}>
-                              {getUnitBadge(item.product)}
-                            </span>
-                          )}
+                          <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
+                            style={{ background: 'var(--brand-light)', color: 'var(--brand-primary)', border: '1px solid var(--brand-lighter)' }}>
+                            {item.unit_name}
+                          </span>
                         </p>
                         <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                          {formatPrice(item.product.price)} × {item.quantity}
+                          {formatPrice(item.price)} × {item.quantity}
+                          {item.conversion_rate > 1 && (
+                            <span className="opacity-70 ml-1">
+                              (= {item.quantity * item.conversion_rate} {getBaseUnitLabel(item.product.unit_type).toLowerCase()})
+                            </span>
+                          )}
                         </p>
                       </div>
 
                       {/* Subtotal */}
-                      <p className="font-bold text-sm flex-shrink-0 min-w-[80px] text-right" style={{ color: 'var(--success)' }}>
-                        {formatPrice(item.product.price * item.quantity)}
+                      <p className="font-bold text-sm flex-shrink-0 min-w-[75px] text-right" style={{ color: 'var(--success)' }}>
+                        {formatPrice(item.price * item.quantity)}
                       </p>
 
                       {/* Quantity controls */}
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button
-                          onClick={() => updateQuantity(item.product.id, -1)}
+                          onClick={() => updateQuantity(item.cart_id, -1)}
                           className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
                           style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
                           onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; }}
@@ -705,19 +843,21 @@ export default function Checkout() {
                         >
                           <MinusIcon className="w-3.5 h-3.5" />
                         </button>
-                        <span className="w-7 text-center font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
+                        <span className="w-6 text-center font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.product.id, 1)}
-                          disabled={item.quantity >= item.product.stock}
+                          onClick={() => updateQuantity(item.cart_id, 1)}
+                          disabled={
+                            cart.filter(c => c.product.id === item.product.id).reduce((s, c) => s + c.quantity * c.conversion_rate, 0) + item.conversion_rate > item.product.stock
+                          }
                           className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
                           style={{
-                            background: item.quantity >= item.product.stock ? 'var(--bg-inset)' : 'var(--success-bg)',
-                            color: item.quantity >= item.product.stock ? 'var(--text-muted)' : 'var(--success)',
-                            cursor: item.quantity >= item.product.stock ? 'not-allowed' : 'pointer',
+                            background: 'var(--success-bg)',
+                            color: 'var(--success)',
+                            cursor: 'pointer',
                           }}
-                          title={item.quantity >= item.product.stock ? `Tồn kho chỉ có ${item.product.stock}` : 'Thêm 1'}
+                          title="Thêm 1"
                         >
                           <PlusIcon className="w-3.5 h-3.5" />
                         </button>
@@ -725,7 +865,7 @@ export default function Checkout() {
 
                       {/* Remove */}
                       <button
-                        onClick={() => removeFromCart(item.product.id)}
+                        onClick={() => removeFromCart(item.cart_id)}
                         className="w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover/cart:opacity-100 transition-all cursor-pointer flex-shrink-0"
                         style={{ color: 'var(--danger)' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'}

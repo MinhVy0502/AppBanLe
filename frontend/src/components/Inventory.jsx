@@ -257,38 +257,58 @@ export default function Inventory() {
     );
   };
 
-  const renderLowStockItem = (product) => (
-    <div
-      key={product.id}
-      className="flex items-center gap-3 p-3.5 rounded-xl transition-all animate-fade-in"
-      style={{
-        background: 'var(--card-bg)',
-        border: '1px solid var(--card-border)',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
-    >
-      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-           style={{ background: 'var(--info-bg)' }}>
-        <PackageIcon className="w-4 h-4" style={{ color: 'var(--info)' }} />
+  const renderLowStockItem = (product) => {
+    const baseUnit = product.unit_type || 'cái';
+    const mainPkgUnit = product.units?.length > 0 ? product.units[0] : null;
+    let pkgBreakdown = null;
+    if (mainPkgUnit && mainPkgUnit.conversion_rate > 1 && product.stock > 0) {
+      const whole = Math.floor(product.stock / mainPkgUnit.conversion_rate);
+      const rem = product.stock % mainPkgUnit.conversion_rate;
+      if (whole > 0) {
+        pkgBreakdown = `(~${whole} ${mainPkgUnit.unit_name}${rem > 0 ? ` ${rem} ${baseUnit}` : ''})`;
+      }
+    }
+
+    return (
+      <div
+        key={product.id}
+        className="flex items-center gap-3 p-3.5 rounded-xl transition-all animate-fade-in"
+        style={{
+          background: 'var(--card-bg)',
+          border: '1px solid var(--card-border)',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+        onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+      >
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+             style={{ background: 'var(--info-bg)' }}>
+          <PackageIcon className="w-4 h-4" style={{ color: 'var(--info)' }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{product.product_name}</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Giá lẻ: {new Intl.NumberFormat('vi-VN').format(product.price)} ₫ / {baseUnit}
+          </p>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <span className="px-2.5 py-1 rounded-lg text-xs font-bold inline-block"
+                style={{
+                  background: product.stock === 0 ? 'var(--danger-bg)' : 'var(--info-bg)',
+                  color: product.stock === 0 ? 'var(--danger)' : 'var(--info)',
+                  border: product.stock === 0 ? '1px solid var(--danger-light)' : '1px solid var(--info-light)',
+                }}>
+            {product.stock === 0 ? 'Hết hàng' : `Còn ${product.stock} ${baseUnit}`}
+          </span>
+          {pkgBreakdown && (
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {pkgBreakdown}
+            </p>
+          )}
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{product.product_name}</p>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          Giá: {new Intl.NumberFormat('vi-VN').format(product.price)} ₫
-        </p>
-      </div>
-      <span className="px-2.5 py-1 rounded-lg text-xs font-bold flex-shrink-0"
-            style={{
-              background: product.stock === 0 ? 'var(--danger-bg)' : 'var(--info-bg)',
-              color: product.stock === 0 ? 'var(--danger)' : 'var(--info)',
-              border: product.stock === 0 ? '1px solid var(--danger-light)' : '1px solid var(--info-light)',
-            }}>
-        {product.stock === 0 ? 'Hết hàng' : `Còn ${product.stock}`}
-      </span>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">

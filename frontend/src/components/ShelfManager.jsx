@@ -79,16 +79,14 @@ const formatPrice = (price) =>
 
 /* Quy cách đóng gói — labels & helpers */
 const UNIT_LABELS = {
-  chai: 'Chai', lon: 'Lon', goi: 'Gói', hop: 'Hộp', bich: 'Bịch', bo: 'Bó', hu: 'Hũ',
-  day: 'Dây', thung: 'Thùng', loc: 'Lốc', cay: 'Cây', le: 'Lẻ',
+  lon: 'Lon', chai: 'Chai', goi: 'Gói', hop: 'Hộp', bich: 'Bịch', bo: 'Bó', hu: 'Hũ',
+  cai: 'Cái', dieu: 'Điếu', vien: 'Viên', cuon: 'Cuộn', cay: 'Cây', day: 'Dây',
+  thung: 'Thùng', loc: 'Lốc', vi: 'Vỉ', bao: 'Bao', ket: 'Két', le: 'Lẻ',
 };
-const LE_TYPES = ['chai', 'lon', 'goi', 'hop', 'bich', 'bo', 'hu', 'le'];
-const isLeType = (type) => LE_TYPES.includes(type);
+const getBaseUnitLabel = (type) => UNIT_LABELS[type] || type || 'Đơn vị';
 const getUnitBadge = (p) => {
-  if (!p.unit_type || isLeType(p.unit_type)) return null;
-  const label = UNIT_LABELS[p.unit_type] || '';
-  const qty = p.units_per_pack > 1 ? ` ${p.units_per_pack}` : '';
-  return `${label}${qty}`;
+  if (!p) return null;
+  return getBaseUnitLabel(p.unit_type);
 };
 
 /* ===================================================================
@@ -110,7 +108,17 @@ export default function ShelfManager() {
   // -- Thêm / Sửa / Xóa sản phẩm --
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [productForm, setProductForm] = useState({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'chai', units_per_pack: '' });
+  const [productForm, setProductForm] = useState({
+    product_name: '',
+    price: '',
+    cost_price: '',
+    stock: '',
+    stock_input_mode: 'base', // 'base' | 'pack'
+    stock_pack_quantity: '',
+    unit_type: 'lon',
+    allow_retail: true,
+    units: [],
+  });
   const [creatingProduct, setCreatingProduct] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [deletingShelfId, setDeletingShelfId] = useState(null);
@@ -201,54 +209,163 @@ export default function ShelfManager() {
     setCreatingShelf(false);
   };
 
+  const addUnitPreset = (unitName, rate) => {
+    setProductForm((prev) => ({
+      ...prev,
+      units: [
+        ...prev.units,
+        {
+          unit_name: unitName,
+          conversion_rate: String(rate),
+          price: '',
+          cost_price: '',
+          barcode: '',
+        },
+      ],
+    }));
+  };
+
+  const updateUnitField = (index, field, value) => {
+    setProductForm((prev) => {
+      const next = [...prev.units];
+      next[index] = { ...next[index], [field]: value };
+      return { ...prev, units: next };
+    });
+  };
+
+  const removeUnitRow = (index) => {
+    setProductForm((prev) => ({
+      ...prev,
+      units: prev.units.filter((_, i) => i !== index),
+    }));
+  };
+
   const createProduct = async () => {
-    const { product_name, price, cost_price, stock, unit_type, units_per_pack } = productForm;
-    if (!product_name.trim() || price === '' || Number(price) < 0) return;
+    const { product_name, price, cost_price, stock, stock_input_mode, stock_pack_quantity, unit_type, allow_retail, units } = productForm;
+    if (!product_name.trim()) {
+      alert('Vui lòng nhập tên sản phẩm.');
+      return;
+    }
+
+    const validUnits = (units || [])
+      .filter(u => u.unit_name && u.unit_name.trim() && Number(u.conversion_rate) > 1)
+      .map(u => ({
+        unit_name: u.unit_name.trim(),
+        conversion_rate: Number(u.conversion_rate),
+        price: Number(u.price) || 0,
+        cost_price: u.cost_price !== '' && u.cost_price !== undefined ? Number(u.cost_price) : 0,
+        barcode: u.barcode ? u.barcode.trim() : null,
+      }));
+
+    if (!allow_retail && validUnits.length === 0 && (price === '' || Number(price) < 0)) {
+      alert('Sản phẩm chỉ bán sỉ / nguyên kiện cần có ít nhất một quy cách (ví dụ: Thùng 24).');
+      return;
+    }
+
+    if (allow_retail && (price === '' || Number(price) < 0)) {
+      alert('Vui lòng nhập giá bán lẻ hợp lệ.');
+      return;
+    }
+
+    let finalPrice = Number(price);
+    if (!allow_retail && (!price || Number(price) <= 0) && validUnits.length > 0) {
+      finalPrice = validUnits[0].price / validUnits[0].conversion_rate;
+    }
+    if (isNaN(finalPrice) || finalPrice < 0) finalPrice = 0;
+
+    let finalCostPrice = cost_price !== '' ? Number(cost_price) : 0;
+    if (!allow_retail && (!cost_price || Number(cost_price) <= 0) && validUnits.length > 0 && validUnits[0].cost_price > 0) {
+      finalCostPrice = validUnits[0].cost_price / validUnits[0].conversion_rate;
+    }
+
+    let finalStock = 0;
+    if (stock_input_mode === 'pack' && validUnits.length > 0 && stock_pack_quantity !== '') {
+      finalStock = Number(stock_pack_quantity) * validUnits[0].conversion_rate;
+    } else if (stock !== '') {
+      finalStock = Number(stock);
+    }
+
     setCreatingProduct(true);
     try {
       const payload = {
         product_name: product_name.trim(),
-        price: Number(price),
-        cost_price: cost_price !== '' ? Number(cost_price) : 0,
-        stock: stock !== '' ? Number(stock) : 0,
-        unit_type: unit_type || 'chai',
-        units_per_pack: !isLeType(unit_type) && units_per_pack ? Number(units_per_pack) : 1,
+        price: finalPrice,
+        cost_price: finalCostPrice,
+        stock: finalStock,
+        unit_type: unit_type ? String(unit_type).trim().toLowerCase() : 'lon',
+        units_per_pack: 1,
+        allow_retail: allow_retail !== undefined ? allow_retail : true,
+        units: validUnits,
       };
 
       if (editingProduct) {
-        // Edit mode
         const res = await api.put(`/products/${editingProduct.id}`, payload);
-        setAllProducts((prev) => prev.map(p => p.id === editingProduct.id ? res.data : p));
+        const updated = res.data?.data || res.data;
+        setAllProducts((prev) => prev.map(p => p.id === editingProduct.id ? updated : p));
       } else {
-        // Create mode
         const res = await api.post('/products', payload);
-        setAllProducts((prev) => [...prev, res.data]);
+        const created = res.data?.data || res.data;
+        setAllProducts((prev) => [...prev, created]);
       }
-      setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'chai', units_per_pack: '' });
+      setProductForm({
+        product_name: '',
+        price: '',
+        cost_price: '',
+        stock: '',
+        stock_input_mode: 'base',
+        stock_pack_quantity: '',
+        unit_type: 'lon',
+        allow_retail: true,
+        units: [],
+      });
       setEditingProduct(null);
       setShowProductModal(false);
     } catch (err) {
       console.error('Lỗi lưu sản phẩm:', err);
+      alert(err.response?.data?.message || 'Lỗi lưu sản phẩm');
     }
     setCreatingProduct(false);
   };
 
   const openEditProduct = (product) => {
     setEditingProduct(product);
+    const mainUnit = product.units && product.units.length > 0 ? product.units[0] : null;
+    const isOnlyPack = product.allow_retail === false;
     setProductForm({
       product_name: product.product_name,
       price: String(product.price),
       cost_price: product.cost_price ? String(product.cost_price) : '',
       stock: String(product.stock),
-      unit_type: product.unit_type || 'chai',
-      units_per_pack: !isLeType(product.unit_type) && product.units_per_pack > 1 ? String(product.units_per_pack) : '',
+      stock_input_mode: isOnlyPack && mainUnit ? 'pack' : 'base',
+      stock_pack_quantity: mainUnit && mainUnit.conversion_rate > 1
+        ? String(Math.floor(Number(product.stock) / mainUnit.conversion_rate))
+        : '',
+      unit_type: product.unit_type || 'lon',
+      allow_retail: product.allow_retail !== undefined ? product.allow_retail : true,
+      units: (product.units || []).map(u => ({
+        unit_name: u.unit_name,
+        conversion_rate: String(u.conversion_rate),
+        price: u.price !== undefined ? String(u.price) : '',
+        cost_price: u.cost_price ? String(u.cost_price) : '',
+        barcode: u.barcode || '',
+      })),
     });
     setShowProductModal(true);
   };
 
   const openAddProduct = () => {
     setEditingProduct(null);
-    setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'chai', units_per_pack: '' });
+    setProductForm({
+      product_name: '',
+      price: '',
+      cost_price: '',
+      stock: '',
+      stock_input_mode: 'base',
+      stock_pack_quantity: '',
+      unit_type: 'lon',
+      allow_retail: true,
+      units: [],
+    });
     setShowProductModal(true);
   };
 
@@ -489,16 +606,34 @@ export default function ShelfManager() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                     {product.product_name}
-                    {getUnitBadge(product) && (
+                    {product.allow_retail === false ? (
+                      <span className="ml-1.5 inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded"
+                            style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-light)' }}>
+                        Chỉ bán sỉ / thùng
+                      </span>
+                    ) : (
                       <span className="ml-1.5 inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                            style={{ background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid var(--info-light)' }}>
-                        {getUnitBadge(product)}
+                            style={{ background: 'var(--brand-light)', color: 'var(--brand-primary)', border: '1px solid var(--brand-lighter)' }}>
+                        {getBaseUnitLabel(product.unit_type)}
                       </span>
                     )}
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {formatPrice(product.price)} • Tồn: {product.stock}
+                    {product.allow_retail === false && product.units?.length > 0
+                      ? `${formatPrice(product.units[0].price)} / ${product.units[0].unit_name} • Tồn: ${Math.floor(product.stock / product.units[0].conversion_rate)} ${product.units[0].unit_name}`
+                      : `${formatPrice(product.price)} • Tồn: ${product.stock} ${getBaseUnitLabel(product.unit_type)}`
+                    }
                   </p>
+                  {Array.isArray(product.units) && product.units.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap mt-1">
+                      {product.units.map((u, ui) => (
+                        <span key={ui} className="text-[10px] px-1.5 py-0.2 rounded font-medium"
+                              style={{ background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid var(--info-light)' }}>
+                          {u.unit_name} ({u.conversion_rate}): {formatPrice(u.price)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => deleteProduct(product.id)}
@@ -582,17 +717,35 @@ export default function ShelfManager() {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-primary)', wordBreak: 'break-word', lineHeight: '1.4' }}>
                             {product.product_name}
-                            {getUnitBadge(product) && (
+                            {product.allow_retail === false ? (
+                              <span className="ml-1.5 sm:ml-2 inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-md"
+                                    style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-light)' }}>
+                                Chỉ bán sỉ / thùng
+                              </span>
+                            ) : (
                               <span className="ml-1.5 sm:ml-2 inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-md"
-                                    style={{ background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid var(--info-light)' }}>
-                                {getUnitBadge(product)}
+                                    style={{ background: 'var(--brand-light)', color: 'var(--brand-primary)', border: '1px solid var(--brand-lighter)' }}>
+                                {getBaseUnitLabel(product.unit_type)}
                               </span>
                             )}
                           </p>
                           <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                            {formatPrice(product.price)}
+                            {product.allow_retail === false && product.units?.length > 0
+                              ? `${formatPrice(product.units[0].price)} / ${product.units[0].unit_name}`
+                              : formatPrice(product.price)
+                            }
                             <span className="sm:hidden ml-2" style={{ color: 'var(--text-muted)' }}>• Tồn: {product.stock}</span>
                           </p>
+                          {Array.isArray(product.units) && product.units.length > 0 && (
+                            <div className="flex items-center gap-1 flex-wrap mt-1">
+                              {product.units.map((u, ui) => (
+                                <span key={ui} className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                                      style={{ background: 'var(--info-bg)', color: 'var(--info)', border: '1px solid var(--info-light)' }}>
+                                  {u.unit_name} ({u.conversion_rate}): {formatPrice(u.price)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right flex-shrink-0 hidden sm:block">
                           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Tồn kho</p>
@@ -762,135 +915,457 @@ export default function ShelfManager() {
       {showProductModal && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-fade-in" onClick={() => setShowProductModal(false)}>
           <div className="absolute inset-0 modal-overlay" />
-          <div className="relative rounded-2xl w-full max-w-md overflow-hidden animate-modal-in"
+          <div className="relative rounded-2xl w-full max-w-3xl overflow-hidden animate-modal-in max-h-[90vh] flex flex-col"
                style={{ background: 'var(--bg-surface)', boxShadow: 'var(--shadow-xl)' }}
                onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-5" style={{ borderBottom: '1px solid var(--border-primary)' }}>
+            {/* Header */}
+            <div className="px-6 py-4 flex items-center justify-between flex-shrink-0"
+                 style={{ borderBottom: '1px solid var(--border-primary)', background: 'var(--bg-surface)' }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md flex-shrink-0"
                      style={{ background: 'linear-gradient(135deg, var(--success), #14b8a6)' }}>
                   <PackageIcon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{editingProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h3>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{editingProduct ? `Đang sửa: ${editingProduct.product_name}` : 'Nhập thông tin sản phẩm bên dưới'}</p>
+                  <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                    {editingProduct ? 'Sửa thông tin sản phẩm' : 'Thêm sản phẩm mới'}
+                  </h3>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {editingProduct ? `Đang sửa: ${editingProduct.product_name}` : 'Thiết lập tên, giá bán và quy cách đóng gói (Thùng/Lốc/Gói...)'}
+                  </p>
                 </div>
               </div>
+              <button
+                onClick={() => setShowProductModal(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-inset)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <XIcon className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            {/* Scrollable Form Body */}
+            <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
+              {/* Tên sản phẩm */}
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                <label className="block text-sm font-bold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                   Tên sản phẩm <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
-                <input type="text" value={productForm.product_name}
+                <input
+                  type="text"
+                  value={productForm.product_name}
                   onChange={(e) => setProductForm({ ...productForm, product_name: e.target.value })}
-                  placeholder="VD: Mì Hảo Hảo, Coca Cola..." autoFocus className="w-full input-themed" />
+                  placeholder="VD: Bia Tiger nâu, Nước ngọt Coca Cola, Mì Hảo Hảo..."
+                  autoFocus
+                  className="w-full input-themed text-base py-2.5 px-3 font-medium"
+                />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Giá bán (₫) <span style={{ color: 'var(--danger)' }}>*</span>
+              {/* TÙY CHỌN: BÁN LẺ VS CHỈ BÁN NGUYÊN THÙNG */}
+              <div className="p-4 rounded-xl border transition-all"
+                   style={{
+                     background: !productForm.allow_retail ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-inset)',
+                     borderColor: !productForm.allow_retail ? 'var(--warning)' : 'var(--border-secondary)',
+                   }}>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
+                        {!productForm.allow_retail
+                          ? '📦 Chỉ bán nguyên thùng / quy cách (Không bán lẻ)'
+                          : '🛒 Cho phép bán lẻ từng ' + getBaseUnitLabel(productForm.unit_type).toLowerCase()}
+                      </span>
+                      {!productForm.allow_retail && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full font-bold"
+                              style={{ background: 'var(--warning-bg)', color: 'var(--warning)', border: '1px solid var(--warning-light)' }}>
+                          Chỉ bán sỉ
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      {!productForm.allow_retail
+                        ? 'Sản phẩm này (như bia nguyên thùng) chỉ bán theo Thùng/Két/Lốc, thu ngân không thể xé lẻ bán từng lon/chai.'
+                        : 'Khách hàng có thể mua lẻ từng ' + getBaseUnitLabel(productForm.unit_type).toLowerCase() + ' hoặc mua nguyên thùng/lốc/dây.'}
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={!productForm.allow_retail}
+                      onChange={(e) => setProductForm({ ...productForm, allow_retail: !e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                   </label>
-                  <input type="number" min="0" step="500" value={productForm.price}
-                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                    placeholder="0" className="w-full input-themed" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Giá vốn (₫)</label>
-                  <input type="number" min="0" step="500" value={productForm.cost_price}
-                    onChange={(e) => setProductForm({ ...productForm, cost_price: e.target.value })}
-                    placeholder="0" className="w-full input-themed" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Tồn kho</label>
-                  <input type="number" min="0" value={productForm.stock}
-                    onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-                    placeholder="0" className="w-full input-themed" />
                 </div>
               </div>
 
-              {/* Quy cách đóng gói */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Quy cách đóng gói</label>
-                <select value={productForm.unit_type}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setProductForm({
-                      ...productForm, unit_type: val,
-                      units_per_pack: isLeType(val) ? '' : (productForm.units_per_pack || (val === 'loc' ? '6' : val === 'thung' ? '24' : val === 'day' ? '12' : val === 'cay' ? '10' : '6')),
-                    });
-                  }}
-                  className="w-full input-themed cursor-pointer"
-                >
-                  <optgroup label="Lẻ">
-                    <option value="chai">Chai</option>
+              {/* Đơn vị cơ sở & Giá bán */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    {productForm.allow_retail ? 'Đơn vị bán lẻ' : 'Đơn vị cơ sở bên trong'} <span style={{ color: 'var(--danger)' }}>*</span>
+                  </label>
+                  <select
+                    value={productForm.unit_type}
+                    onChange={(e) => setProductForm({ ...productForm, unit_type: e.target.value })}
+                    className="w-full input-themed text-sm py-2.5 px-3 cursor-pointer"
+                  >
                     <option value="lon">Lon</option>
+                    <option value="chai">Chai</option>
                     <option value="goi">Gói</option>
                     <option value="hop">Hộp</option>
                     <option value="bich">Bịch</option>
-                    <option value="bo">Bó</option>
-                    <option value="hu">Hũ</option>
-                  </optgroup>
-                  <optgroup label="Đóng gói">
-                    <option value="day">Dây</option>
-                    <option value="thung">Thùng</option>
-                    <option value="loc">Lốc</option>
+                    <option value="cai">Cái / Chiếc</option>
+                    <option value="dieu">Điếu</option>
+                    <option value="vien">Viên</option>
+                    <option value="cuon">Cuộn</option>
                     <option value="cay">Cây</option>
-                  </optgroup>
-                </select>
+                    <option value="hu">Hũ</option>
+                    <option value="bo">Bó</option>
+                    <option value="vi">Vỉ</option>
+                    <option value="bao">Bao</option>
+                    <option value="le">Lẻ</option>
+                  </select>
+                </div>
 
-                {!isLeType(productForm.unit_type) && (
-                  <div className="mt-3 animate-fade-in">
-                    <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                      Số lượng lẻ trong 1 {UNIT_LABELS[productForm.unit_type].toLowerCase()}
-                      <span style={{ color: 'var(--danger)' }}> *</span>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input type="number" min="1" value={productForm.units_per_pack}
-                        onChange={(e) => setProductForm({ ...productForm, units_per_pack: e.target.value })}
-                        placeholder={productForm.unit_type === 'loc' ? '6' : productForm.unit_type === 'thung' ? '24' : productForm.unit_type === 'day' ? '12' : productForm.unit_type === 'cay' ? '10' : '6'}
-                        className="w-28 input-themed" />
-                      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        đơn vị lẻ / {UNIT_LABELS[productForm.unit_type].toLowerCase()}
-                      </span>
+                {productForm.allow_retail ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                        Giá bán lẻ (₫) <span style={{ color: 'var(--danger)' }}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="500"
+                        value={productForm.price}
+                        onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                        placeholder="VD: 18000"
+                        className="w-full input-themed text-sm py-2.5 px-3 font-semibold"
+                      />
+                      {productForm.price && Number(productForm.price) > 0 && (
+                        <p className="text-xs font-bold mt-1" style={{ color: 'var(--success)' }}>
+                          {formatPrice(Number(productForm.price))} / {getBaseUnitLabel(productForm.unit_type).toLowerCase()}
+                        </p>
+                      )}
                     </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                        Giá vốn lẻ (₫)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="500"
+                        value={productForm.cost_price}
+                        onChange={(e) => setProductForm({ ...productForm, cost_price: e.target.value })}
+                        placeholder="VD: 14000"
+                        className="w-full input-themed text-sm py-2.5 px-3"
+                      />
+                      {productForm.cost_price && Number(productForm.cost_price) > 0 && (
+                        <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
+                          Vốn: {formatPrice(Number(productForm.cost_price))}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="sm:col-span-2 flex items-center p-3 rounded-xl" style={{ background: 'var(--bg-inset)' }}>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      💡 Sản phẩm <strong>Chỉ bán nguyên kiện</strong>: Giá bán và giá vốn sẽ được thiết lập trực tiếp theo Thùng/Két/Quy cách ở phần bên dưới.
+                    </p>
                   </div>
                 )}
               </div>
 
-              {/* Preview giá */}
-              {productForm.price && Number(productForm.price) > 0 && (
-                <div className="flex items-center gap-2 p-3 rounded-xl animate-fade-in"
-                     style={{ background: 'var(--success-bg)', border: '1px solid var(--success-light)' }}>
-                  <span className="text-sm" style={{ color: 'var(--success)' }}>Giá hiển thị:</span>
-                  <span className="font-bold" style={{ color: 'var(--success)' }}>
-                    {formatPrice(Number(productForm.price))}
-                    {!isLeType(productForm.unit_type) && (
-                      <span className="font-normal ml-1" style={{ opacity: 0.7 }}>
-                        / {UNIT_LABELS[productForm.unit_type].toLowerCase()}
-                        {productForm.units_per_pack ? ` ${productForm.units_per_pack}` : ''}
-                      </span>
-                    )}
-                  </span>
+              {/* TỒN KHO & LỰA CHỌN ĐƠN VỊ NHẬP TỒN */}
+              <div className="p-4 rounded-xl border" style={{ background: 'var(--bg-inset)', borderColor: 'var(--border-secondary)' }}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                  <div>
+                    <label className="text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
+                      Số lượng tồn kho ban đầu
+                    </label>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {productForm.stock_input_mode === 'pack' && productForm.units.length > 0
+                        ? `Bạn đang nhập theo: ${productForm.units[0].unit_name || 'Thùng'} (Hệ thống sẽ tự quy đổi)`
+                        : `Bạn đang nhập theo đơn vị lẻ: ${getBaseUnitLabel(productForm.unit_type)}`}
+                    </p>
+                  </div>
+                  {productForm.units && productForm.units.length > 0 && (
+                    <div className="flex items-center gap-1.5 p-1 rounded-xl" style={{ background: 'var(--bg-surface)' }}>
+                      <button
+                        type="button"
+                        onClick={() => setProductForm({ ...productForm, stock_input_mode: 'base' })}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        style={{
+                          background: productForm.stock_input_mode !== 'pack' ? 'var(--brand-primary)' : 'transparent',
+                          color: productForm.stock_input_mode !== 'pack' ? '#fff' : 'var(--text-muted)',
+                        }}
+                      >
+                        {getBaseUnitLabel(productForm.unit_type)} (Lẻ)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProductForm({ ...productForm, stock_input_mode: 'pack' })}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        style={{
+                          background: productForm.stock_input_mode === 'pack' ? 'var(--warning)' : 'transparent',
+                          color: productForm.stock_input_mode === 'pack' ? '#fff' : 'var(--text-muted)',
+                        }}
+                      >
+                        📦 {productForm.units[0]?.unit_name || 'Thùng'} ({productForm.units[0]?.conversion_rate || 24} {getBaseUnitLabel(productForm.unit_type).toLowerCase()})
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {productForm.stock_input_mode === 'pack' && productForm.units.length > 0 ? (
+                  <div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        value={productForm.stock_pack_quantity}
+                        onChange={(e) => setProductForm({ ...productForm, stock_pack_quantity: e.target.value })}
+                        placeholder="VD: 10 (thùng)"
+                        className="w-full input-themed text-base font-bold py-2.5 px-3 pr-24"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold" style={{ color: 'var(--warning)' }}>
+                        {productForm.units[0]?.unit_name || 'Thùng'}
+                      </span>
+                    </div>
+                    {productForm.stock_pack_quantity !== '' && Number(productForm.stock_pack_quantity) > 0 && (
+                      <p className="text-xs font-bold mt-2 flex items-center gap-1.5" style={{ color: 'var(--success)' }}>
+                        <span>✓ Quy đổi tồn kho:</span>
+                        <span>{Number(productForm.stock_pack_quantity)} {productForm.units[0]?.unit_name} = </span>
+                        <strong className="underline text-sm">{Number(productForm.stock_pack_quantity) * (Number(productForm.units[0]?.conversion_rate) || 24)} {getBaseUnitLabel(productForm.unit_type).toLowerCase()}</strong>
+                        <span>trong kho.</span>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        value={productForm.stock}
+                        onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
+                        placeholder="0"
+                        className="w-full input-themed text-base font-bold py-2.5 px-3 pr-20"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold" style={{ color: 'var(--text-muted)' }}>
+                        {getBaseUnitLabel(productForm.unit_type)}
+                      </span>
+                    </div>
+                    {productForm.units && productForm.units.length > 0 && productForm.stock !== '' && Number(productForm.stock) > 0 && (
+                      <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                        💡 Tương đương: ~{Math.floor(Number(productForm.stock) / Number(productForm.units[0].conversion_rate))} {productForm.units[0].unit_name}
+                        {Number(productForm.stock) % Number(productForm.units[0].conversion_rate) > 0 && (
+                          <span> và {Number(productForm.stock) % Number(productForm.units[0].conversion_rate)} {getBaseUnitLabel(productForm.unit_type).toLowerCase()} lẻ</span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* QUY CÁCH ĐÓNG GÓI MỞ RỘNG */}
+              <div className="pt-4 border-t" style={{ borderColor: 'var(--border-secondary)' }}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                  <div>
+                    <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                      Quy cách đóng gói & Giá sỉ (Thùng, Lốc, Dây, Cây...)
+                    </span>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {!productForm.allow_retail
+                        ? 'Bắt buộc thêm quy cách (Thùng, Két...) vì sản phẩm này chỉ bán nguyên kiện.'
+                        : 'Thêm nếu bạn có bán nguyên thùng/lốc hoặc nhập hàng theo thùng.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Gợi ý thêm nhanh */}
+                <div className="flex items-center gap-2 flex-wrap mb-3.5">
+                  <button type="button" onClick={() => addUnitPreset('Thùng', 24)}
+                    className="text-xs px-3 py-1.5 rounded-lg border font-semibold cursor-pointer transition-all hover:scale-105"
+                    style={{ background: 'var(--bg-inset)', borderColor: 'var(--border-primary)', color: 'var(--brand-primary)' }}>
+                    + Thùng (24 {getBaseUnitLabel(productForm.unit_type).toLowerCase()})
+                  </button>
+                  <button type="button" onClick={() => addUnitPreset('Lốc', 6)}
+                    className="text-xs px-3 py-1.5 rounded-lg border font-semibold cursor-pointer transition-all hover:scale-105"
+                    style={{ background: 'var(--bg-inset)', borderColor: 'var(--border-primary)', color: 'var(--brand-primary)' }}>
+                    + Lốc (6 {getBaseUnitLabel(productForm.unit_type).toLowerCase()})
+                  </button>
+                  <button type="button" onClick={() => addUnitPreset('Dây', 12)}
+                    className="text-xs px-3 py-1.5 rounded-lg border font-semibold cursor-pointer transition-all hover:scale-105"
+                    style={{ background: 'var(--bg-inset)', borderColor: 'var(--border-primary)', color: 'var(--brand-primary)' }}>
+                    + Dây (12 {getBaseUnitLabel(productForm.unit_type).toLowerCase()})
+                  </button>
+                  <button type="button" onClick={() => addUnitPreset('Cây', 10)}
+                    className="text-xs px-3 py-1.5 rounded-lg border font-semibold cursor-pointer transition-all hover:scale-105"
+                    style={{ background: 'var(--bg-inset)', borderColor: 'var(--border-primary)', color: 'var(--brand-primary)' }}>
+                    + Cây (10 {getBaseUnitLabel(productForm.unit_type).toLowerCase()})
+                  </button>
+                  <button type="button" onClick={() => addUnitPreset('Hộp', 10)}
+                    className="text-xs px-3 py-1.5 rounded-lg border font-semibold cursor-pointer transition-all hover:scale-105"
+                    style={{ background: 'var(--bg-inset)', borderColor: 'var(--border-primary)', color: 'var(--brand-primary)' }}>
+                    + Hộp (10)
+                  </button>
+                  <button type="button" onClick={() => addUnitPreset('', 2)}
+                    className="text-xs px-3 py-1.5 rounded-lg border font-semibold cursor-pointer transition-all hover:scale-105"
+                    style={{ background: 'var(--bg-inset)', borderColor: 'var(--border-primary)', color: 'var(--text-secondary)' }}>
+                    + Tự đặt quy cách
+                  </button>
+                </div>
+
+                {/* Danh sách quy cách (RỘNG RÃI, TO RÕ, KHÔNG BỊ CO CỤM) */}
+                {productForm.units && productForm.units.length > 0 ? (
+                  <div className="space-y-3">
+                    {productForm.units.map((u, index) => (
+                      <div key={index} className="p-4 rounded-2xl border transition-all animate-fade-in"
+                           style={{ background: 'var(--bg-inset)', borderColor: 'var(--border-secondary)' }}>
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-start">
+                          {/* Tên quy cách */}
+                          <div className="sm:col-span-3">
+                            <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                              Tên quy cách <span style={{ color: 'var(--danger)' }}>*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={u.unit_name}
+                              onChange={(e) => updateUnitField(index, 'unit_name', e.target.value)}
+                              placeholder="VD: Thùng"
+                              className="w-full input-themed text-sm py-2.5 px-3 font-semibold"
+                            />
+                          </div>
+
+                          {/* Tỷ lệ quy đổi */}
+                          <div className="sm:col-span-3">
+                            <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                              1 {u.unit_name || 'quy cách'} chứa <span style={{ color: 'var(--danger)' }}>*</span>
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min="2"
+                                value={u.conversion_rate}
+                                onChange={(e) => updateUnitField(index, 'conversion_rate', e.target.value)}
+                                placeholder="24"
+                                className="w-full input-themed text-sm py-2.5 px-3 pr-14 font-semibold"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold truncate max-w-[50px]" style={{ color: 'var(--text-muted)' }}>
+                                {getBaseUnitLabel(productForm.unit_type).toLowerCase()}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Giá bán quy cách */}
+                          <div className="sm:col-span-3">
+                            <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                              Giá bán (₫) <span style={{ color: 'var(--danger)' }}>*</span>
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="500"
+                              value={u.price}
+                              onChange={(e) => updateUnitField(index, 'price', e.target.value)}
+                              placeholder="VD: 370000"
+                              className="w-full input-themed text-sm py-2.5 px-3 font-bold"
+                            />
+                            {u.price && Number(u.price) > 0 && (
+                              <p className="text-xs font-bold mt-1" style={{ color: 'var(--success)' }}>
+                                = {formatPrice(Number(u.price))}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Giá vốn quy cách */}
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                              Giá vốn (₫)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="500"
+                              value={u.cost_price}
+                              onChange={(e) => updateUnitField(index, 'cost_price', e.target.value)}
+                              placeholder="VD: 320000"
+                              className="w-full input-themed text-sm py-2.5 px-3 font-medium"
+                            />
+                            {u.cost_price && Number(u.cost_price) > 0 && (
+                              <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
+                                = {formatPrice(Number(u.cost_price))}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Nút xóa */}
+                          <div className="sm:col-span-1 flex items-center justify-end sm:pt-7">
+                            <button
+                              type="button"
+                              onClick={() => removeUnitRow(index)}
+                              title="Xóa quy cách này"
+                              className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
+                              style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'var(--danger-bg)'}
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl text-center border border-dashed" style={{ borderColor: 'var(--border-secondary)' }}>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      Chưa có quy cách đóng gói nào. Bấm một trong các nút gợi ý trên để thêm nhanh.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="px-6 py-4 flex items-center justify-end gap-2.5"
-                 style={{ borderTop: '1px solid var(--border-primary)', background: 'var(--bg-inset)' }}>
+            {/* Footer */}
+            <div className="px-6 py-4 flex items-center justify-end gap-3 flex-shrink-0"
+                 style={{ borderTop: '1px solid var(--border-primary)', background: 'var(--bg-surface)' }}>
               <button
-                onClick={() => { setShowProductModal(false); setEditingProduct(null); setProductForm({ product_name: '', price: '', cost_price: '', stock: '', unit_type: 'chai', units_per_pack: '' }); }}
-                className="btn-secondary">Hủy</button>
-              <button onClick={createProduct}
-                disabled={creatingProduct || !productForm.product_name.trim() || productForm.price === '' || Number(productForm.price) < 0}
-                className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: 'linear-gradient(135deg, var(--success), #14b8a6)', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}>
+                onClick={() => {
+                  setShowProductModal(false);
+                  setEditingProduct(null);
+                  setProductForm({
+                    product_name: '',
+                    price: '',
+                    cost_price: '',
+                    stock: '',
+                    stock_input_mode: 'base',
+                    stock_pack_quantity: '',
+                    unit_type: 'lon',
+                    allow_retail: true,
+                    units: [],
+                  });
+                }}
+                className="btn-secondary"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={createProduct}
+                disabled={creatingProduct}
+                className="px-6 py-2.5 rounded-xl text-white text-sm font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: 'linear-gradient(135deg, var(--success), #14b8a6)', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}
+              >
                 {creatingProduct ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {editingProduct ? 'Đang lưu...' : 'Đang thêm...'}
+                    Đang lưu...
                   </span>
                 ) : (editingProduct ? 'Lưu thay đổi' : 'Thêm sản phẩm')}
               </button>

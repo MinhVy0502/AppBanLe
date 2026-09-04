@@ -41,27 +41,35 @@ router.post('/', async (req, res) => {
         });
       }
 
-      if (product.stock < item.quantity) {
+      const rate = Number(item.conversion_rate) > 0 ? Number(item.conversion_rate) : 1;
+      const baseQty = Number(item.quantity) * rate;
+
+      if (product.stock < baseQty) {
         await t.rollback();
+        const unitDisplay = item.unit_name ? ` để bán ${item.quantity} ${item.unit_name}` : '';
         return res.status(400).json({
           success: false,
-          message: `"${product.product_name}" chỉ còn ${product.stock} trong kho, không đủ ${item.quantity}.`,
+          message: `"${product.product_name}" chỉ còn ${product.stock} ${product.unit_type || 'đơn vị'} trong kho, không đủ ${baseQty} đơn vị lẻ${unitDisplay}.`,
         });
       }
 
-      // Trừ tồn kho
-      product.stock -= item.quantity;
+      // Trừ tồn kho cơ sở
+      product.stock -= baseQty;
       await product.save({ transaction: t });
 
-      const costPrice = Number(product.cost_price) || 0;
-      totalCost += costPrice * item.quantity;
+      const costPerBase = Number(product.cost_price) || 0;
+      const itemCostPrice = costPerBase * rate;
+      totalCost += costPerBase * baseQty;
 
       orderItems.push({
         product_id: product.id,
         product_name: product.product_name,
-        price: Number(product.price),
-        cost_price: costPrice,
-        quantity: item.quantity,
+        price: Number(item.price !== undefined ? item.price : product.price),
+        cost_price: itemCostPrice,
+        quantity: Number(item.quantity),
+        unit_name: item.unit_name || product.unit_type || 'cái',
+        conversion_rate: rate,
+        base_quantity: baseQty,
         unit_type: product.unit_type,
         units_per_pack: product.units_per_pack,
       });
@@ -217,7 +225,8 @@ router.delete('/:id', async (req, res) => {
           transaction: t,
         });
         if (product) {
-          product.stock += item.quantity;
+          const returnQty = item.base_quantity || (item.quantity * (item.conversion_rate || 1));
+          product.stock += returnQty;
           await product.save({ transaction: t });
         }
       }

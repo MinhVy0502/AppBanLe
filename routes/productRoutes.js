@@ -1,5 +1,5 @@
 const express = require('express');
-const { Product, Shelf } = require('../models');
+const { Product, Shelf, ProductUnit, sequelize } = require('../models');
 
 const router = express.Router();
 
@@ -19,7 +19,10 @@ router.get('/', async (req, res) => {
     const products = await Product.findAll({
       where,
       order: [['id', 'ASC']],
-      include: [{ model: Shelf, as: 'shelf', attributes: ['id', 'shelf_name'] }],
+      include: [
+        { model: Shelf, as: 'shelf', attributes: ['id', 'shelf_name'] },
+        { model: ProductUnit, as: 'units' },
+      ],
     });
 
     return res.json({
@@ -40,12 +43,14 @@ router.get('/', async (req, res) => {
 //  POST /api/products — Thêm sản phẩm mới
 // ==================================================
 router.post('/', async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const store_id = req.store_id;
-    const { product_name, price, cost_price, stock, shelf_id, unit_type, units_per_pack } = req.body;
+    const { product_name, price, cost_price, stock, shelf_id, unit_type, units_per_pack, units, allow_retail } = req.body;
 
     // --- Validate đầu vào ---
     if (!product_name || !product_name.trim()) {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message: 'Vui lòng nhập tên sản phẩm.',
@@ -53,6 +58,7 @@ router.post('/', async (req, res) => {
     }
 
     if (price === undefined || price === null || Number(price) < 0) {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message: 'Giá sản phẩm không hợp lệ.',
@@ -60,20 +66,19 @@ router.post('/', async (req, res) => {
     }
 
     // --- Validate unit_type & packaging ---
-    const LE_UNIT_TYPES = ['le', 'chai', 'lon', 'goi', 'hop', 'bich', 'bo', 'hu'];
-    const PACK_UNIT_TYPES = ['day', 'thung', 'loc', 'cay'];
-    const validUnitTypes = [...LE_UNIT_TYPES, ...PACK_UNIT_TYPES];
-    const finalUnitType = unit_type && validUnitTypes.includes(unit_type) ? unit_type : 'chai';
-    const isLe = LE_UNIT_TYPES.includes(finalUnitType);
-    const finalUnitsPer = !isLe && units_per_pack && Number(units_per_pack) > 0 ? Number(units_per_pack) : 1;
+    const finalUnitType = unit_type && String(unit_type).trim() ? String(unit_type).trim().toLowerCase() : 'lon';
+    const finalUnitsPer = units_per_pack && Number(units_per_pack) > 0 ? Number(units_per_pack) : 1;
+    const finalAllowRetail = allow_retail !== undefined ? !!allow_retail : true;
 
     // --- Nếu có shelf_id, kiểm tra kệ có thuộc cửa hàng này không ---
     if (shelf_id) {
       const shelf = await Shelf.findOne({
         where: { id: shelf_id, store_id },
+        transaction: t,
       });
 
       if (!shelf) {
+        await t.rollback();
         return res.status(404).json({
           success: false,
           message: 'Kệ hàng không tồn tại hoặc không thuộc cửa hàng của bạn.',
@@ -89,16 +94,45 @@ router.post('/', async (req, res) => {
       cost_price: cost_price !== undefined ? Number(cost_price) : 0,
       stock: stock !== undefined ? Number(stock) : 0,
       unit_type: finalUnitType,
-      units_per_pack: finalUnitType === 'le' ? 1 : finalUnitsPer,
+      units_per_pack: finalUnitsPer,
+      allow_retail: finalAllowRetail,
+    }, { transaction: t });
+
+    // --- Thêm các quy cách đóng gói (ProductUnit) nếu có ---
+    if (Array.isArray(units) && units.length > 0) {
+      for (const u of units) {
+        if (u.unit_name && u.unit_name.trim() && Number(u.conversion_rate) > 1) {
+          await ProductUnit.create({
+            store_id,
+            product_id: newProduct.id,
+            unit_name: u.unit_name.trim(),
+            conversion_rate: Number(u.conversion_rate),
+            price: Number(u.price) || 0,
+            cost_price: u.cost_price !== undefined && u.cost_price !== null ? Number(u.cost_price) : 0,
+            barcode: u.barcode ? String(u.barcode).trim() : null,
+            is_default_import: !!u.is_default_import,
+          }, { transaction: t });
+        }
+      }
+    }
+
+    await t.commit();
+
+    const createdProduct = await Product.findByPk(newProduct.id, {
+      include: [
+        { model: Shelf, as: 'shelf', attributes: ['id', 'shelf_name'] },
+        { model: ProductUnit, as: 'units' },
+      ],
     });
 
     return res.status(201).json({
       success: true,
       message: 'Thêm sản phẩm thành công!',
-      data: newProduct,
+      data: createdProduct,
     });
 
   } catch (error) {
+    await t.rollback();
     console.error('Lỗi thêm sản phẩm:', error);
     return res.status(500).json({
       success: false,
@@ -111,25 +145,29 @@ router.post('/', async (req, res) => {
 //  PUT /api/products/:id — Chỉnh sửa sản phẩm
 // ==================================================
 router.put('/:id', async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const store_id = req.store_id;
     const productId = req.params.id;
 
     const product = await Product.findOne({
       where: { id: productId, store_id },
+      transaction: t,
     });
 
     if (!product) {
+      await t.rollback();
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy sản phẩm này trong cửa hàng của bạn.',
       });
     }
 
-    const { product_name, price, cost_price, stock, unit_type, units_per_pack } = req.body;
+    const { product_name, price, cost_price, stock, unit_type, units_per_pack, units, shelf_id, allow_retail } = req.body;
 
     if (product_name !== undefined) {
       if (!product_name.trim()) {
+        await t.rollback();
         return res.status(400).json({ success: false, message: 'Tên sản phẩm không được để trống.' });
       }
       product.product_name = product_name.trim();
@@ -137,28 +175,60 @@ router.put('/:id', async (req, res) => {
     if (price !== undefined) product.price = Number(price);
     if (cost_price !== undefined) product.cost_price = Number(cost_price);
     if (stock !== undefined) product.stock = Number(stock);
+    if (shelf_id !== undefined) product.shelf_id = shelf_id || null;
+    if (allow_retail !== undefined) product.allow_retail = !!allow_retail;
 
-    const LE_UNIT_TYPES = ['le', 'chai', 'lon', 'goi', 'hop', 'bich', 'bo', 'hu'];
-    const PACK_UNIT_TYPES = ['day', 'thung', 'loc', 'cay'];
-    const validUnitTypes = [...LE_UNIT_TYPES, ...PACK_UNIT_TYPES];
-
-    if (unit_type !== undefined) {
-      product.unit_type = validUnitTypes.includes(unit_type) ? unit_type : 'chai';
+    if (unit_type !== undefined && String(unit_type).trim()) {
+      product.unit_type = String(unit_type).trim().toLowerCase();
     }
-    if (units_per_pack !== undefined || unit_type !== undefined) {
-      const isLe = LE_UNIT_TYPES.includes(product.unit_type);
-      product.units_per_pack = isLe ? 1 : (Number(units_per_pack) > 0 ? Number(units_per_pack) : (product.units_per_pack > 1 ? product.units_per_pack : 1));
+    if (units_per_pack !== undefined) {
+      product.units_per_pack = Number(units_per_pack) > 0 ? Number(units_per_pack) : 1;
     }
 
-    await product.save();
+    await product.save({ transaction: t });
+
+    // --- Cập nhật danh sách ProductUnit nếu có truyền units ---
+    if (Array.isArray(units)) {
+      // Xóa các unit cũ
+      await ProductUnit.destroy({
+        where: { product_id: product.id, store_id },
+        transaction: t,
+      });
+
+      // Tạo lại các unit mới
+      for (const u of units) {
+        if (u.unit_name && u.unit_name.trim() && Number(u.conversion_rate) > 1) {
+          await ProductUnit.create({
+            store_id,
+            product_id: product.id,
+            unit_name: u.unit_name.trim(),
+            conversion_rate: Number(u.conversion_rate),
+            price: Number(u.price) || 0,
+            cost_price: u.cost_price !== undefined && u.cost_price !== null ? Number(u.cost_price) : 0,
+            barcode: u.barcode ? String(u.barcode).trim() : null,
+            is_default_import: !!u.is_default_import,
+          }, { transaction: t });
+        }
+      }
+    }
+
+    await t.commit();
+
+    const updatedProduct = await Product.findByPk(product.id, {
+      include: [
+        { model: Shelf, as: 'shelf', attributes: ['id', 'shelf_name'] },
+        { model: ProductUnit, as: 'units' },
+      ],
+    });
 
     return res.json({
       success: true,
       message: 'Cập nhật sản phẩm thành công!',
-      data: product,
+      data: updatedProduct,
     });
 
   } catch (error) {
+    await t.rollback();
     console.error('Lỗi cập nhật sản phẩm:', error);
     return res.status(500).json({
       success: false,

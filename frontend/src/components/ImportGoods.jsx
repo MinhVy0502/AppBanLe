@@ -96,6 +96,8 @@ export default function ImportGoods() {
     unit_cost: '',
     note: '',
     import_date: new Date().toISOString().split('T')[0],
+    unit_name: '',
+    conversion_rate: 1,
   });
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -137,9 +139,39 @@ export default function ImportGoods() {
     setLoading(false);
   };
 
+  // Khi chọn sản phẩm trong form nhập hàng
+  const handleProductChange = (productId) => {
+    const prod = products.find(p => String(p.id) === String(productId));
+    if (!prod) {
+      setForm(f => ({ ...f, product_id: '', unit_name: '', conversion_rate: 1, unit_cost: '' }));
+      return;
+    }
+    // Mặc định ưu tiên chọn quy cách Thùng nếu có, hoặc quy cách đóng gói đầu tiên, hoặc đơn vị lẻ
+    const thungUnit = (prod.units || []).find(u => u.unit_name.toLowerCase().includes('thùng') || u.is_default_import);
+    const defaultUnit = thungUnit || (prod.units && prod.units.length > 0 ? prod.units[0] : null);
+
+    if (defaultUnit) {
+      setForm(f => ({
+        ...f,
+        product_id: productId,
+        unit_name: defaultUnit.unit_name,
+        conversion_rate: defaultUnit.conversion_rate,
+        unit_cost: defaultUnit.cost_price ? String(defaultUnit.cost_price) : (Number(prod.cost_price || 0) * defaultUnit.conversion_rate ? String(Number(prod.cost_price || 0) * defaultUnit.conversion_rate) : ''),
+      }));
+    } else {
+      setForm(f => ({
+        ...f,
+        product_id: productId,
+        unit_name: prod.unit_type || 'cái',
+        conversion_rate: 1,
+        unit_cost: prod.cost_price ? String(prod.cost_price) : '',
+      }));
+    }
+  };
+
   // ---- Handlers ----
   const createImport = async () => {
-    const { product_id, quantity, unit_cost } = form;
+    const { product_id, quantity, unit_cost, unit_name, conversion_rate } = form;
     if (!product_id || !quantity || !unit_cost) {
       showToast('Vui lòng điền đầy đủ: sản phẩm, số lượng, giá nhập.', 'error');
       return;
@@ -151,6 +183,8 @@ export default function ImportGoods() {
         product_id: Number(product_id),
         quantity: Number(quantity),
         unit_cost: Number(unit_cost),
+        unit_name: unit_name || null,
+        conversion_rate: Number(conversion_rate) || 1,
       });
       showToast('Nhập hàng thành công!');
       setForm({
@@ -160,6 +194,8 @@ export default function ImportGoods() {
         unit_cost: '',
         note: '',
         import_date: new Date().toISOString().split('T')[0],
+        unit_name: '',
+        conversion_rate: 1,
       });
       setShowModal(false);
       fetchAll();
@@ -183,11 +219,27 @@ export default function ImportGoods() {
   };
 
   // ---- Computed ----
+  const selectedProduct = useMemo(() => {
+    return products.find(p => String(p.id) === String(form.product_id));
+  }, [products, form.product_id]);
+
   const totalCostCalc = useMemo(() => {
     const q = Number(form.quantity) || 0;
     const u = Number(form.unit_cost) || 0;
     return q * u;
   }, [form.quantity, form.unit_cost]);
+
+  const baseQuantityCalc = useMemo(() => {
+    const q = Number(form.quantity) || 0;
+    const r = Number(form.conversion_rate) || 1;
+    return q * r;
+  }, [form.quantity, form.conversion_rate]);
+
+  const costPerBaseUnitCalc = useMemo(() => {
+    const u = Number(form.unit_cost) || 0;
+    const r = Number(form.conversion_rate) || 1;
+    return r > 0 ? (u / r) : u;
+  }, [form.unit_cost, form.conversion_rate]);
 
   const filteredImports = useMemo(() => {
     let list = imports;
@@ -482,13 +534,21 @@ export default function ImportGoods() {
                           {imp.supplier_name || <span style={{ color: 'var(--text-muted)' }}>—</span>}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold"
-                                style={{ background: 'var(--brand-bg)', color: 'var(--brand-primary)' }}>
-                            +{imp.quantity}
-                          </span>
+                          <div>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold"
+                                  style={{ background: 'var(--brand-bg)', color: 'var(--brand-primary)' }}>
+                              +{imp.quantity} {imp.unit_name || imp.product?.unit_type || 'đơn vị'}
+                            </span>
+                            {((imp.conversion_rate && imp.conversion_rate > 1) || (imp.base_quantity && imp.base_quantity > imp.quantity)) && (
+                              <div className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                (= {imp.base_quantity || (imp.quantity * imp.conversion_rate)} {imp.product?.unit_type || 'lẻ'})
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                           {formatCurrency(imp.unit_cost)}
+                          {imp.unit_name && <span className="text-xs text-muted">/{imp.unit_name.toLowerCase()}</span>}
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-sm font-bold" style={{ color: 'var(--warning)' }}>
@@ -552,11 +612,16 @@ export default function ImportGoods() {
                         <TrashIcon />
                       </button>
                     </div>
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold"
                             style={{ background: 'var(--brand-bg)', color: 'var(--brand-primary)' }}>
-                        +{imp.quantity}
+                        +{imp.quantity} {imp.unit_name || imp.product?.unit_type || 'đơn vị'}
                       </span>
+                      {imp.conversion_rate > 1 && (
+                        <span className="text-xs text-muted">
+                          (= {imp.base_quantity || (imp.quantity * imp.conversion_rate)} {imp.product?.unit_type || 'lẻ'})
+                        </span>
+                      )}
                       <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>× {formatCurrency(imp.unit_cost)}</span>
                       <span className="text-xs font-bold ml-auto" style={{ color: 'var(--warning)' }}>{formatCurrency(imp.total_cost)}</span>
                     </div>
@@ -680,54 +745,104 @@ export default function ImportGoods() {
                 </label>
                 <select
                   value={form.product_id}
-                  onChange={e => setForm(f => ({ ...f, product_id: e.target.value }))}
+                  onChange={e => handleProductChange(e.target.value)}
                   className="w-full py-2.5 px-3 input-themed text-sm cursor-pointer"
                 >
                   <option value="">— Chọn sản phẩm —</option>
                   {products.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.product_name} (Kho: {p.stock})
+                      {p.product_name} (Kho: {p.stock} {p.unit_type || ''})
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Đơn vị nhập hàng */}
+              {selectedProduct && (
+                <div className="animate-fade-in">
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Đơn vị nhập hàng <span style={{ color: 'var(--danger)' }}>*</span>
+                  </label>
+                  <select
+                    value={`${form.unit_name || ''}_${form.conversion_rate || 1}`}
+                    onChange={(e) => {
+                      const [uName, uRateStr] = e.target.value.split('_');
+                      const rate = Number(uRateStr) || 1;
+                      const matchingUnit = (selectedProduct.units || []).find(u => u.unit_name === uName);
+                      setForm(f => ({
+                        ...f,
+                        unit_name: uName,
+                        conversion_rate: rate,
+                        unit_cost: matchingUnit && matchingUnit.cost_price ? String(matchingUnit.cost_price) : f.unit_cost,
+                      }));
+                    }}
+                    className="w-full py-2.5 px-3 input-themed text-sm cursor-pointer font-medium"
+                  >
+                    {/* Packaging units first */}
+                    {(selectedProduct.units || []).map(u => (
+                      <option key={u.id || u.unit_name} value={`${u.unit_name}_${u.conversion_rate}`}>
+                        📦 {u.unit_name} (1 {u.unit_name.toLowerCase()} = {u.conversion_rate} {selectedProduct.unit_type || 'lẻ'})
+                        {u.cost_price > 0 ? ` — Giá nhập gợi ý: ${formatCurrency(u.cost_price)}` : ''}
+                      </option>
+                    ))}
+                    {/* Base unit */}
+                    <option value={`${selectedProduct.unit_type || 'cái'}_1`}>
+                      🔹 {selectedProduct.unit_type || 'Đơn vị lẻ'} (Đơn vị lẻ cơ sở)
+                      {selectedProduct.cost_price > 0 ? ` — Giá vốn: ${formatCurrency(selectedProduct.cost_price)}` : ''}
+                    </option>
+                  </select>
+                </div>
+              )}
+
               {/* Quantity & Unit cost */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Số lượng <span style={{ color: 'var(--danger)' }}>*</span>
+                    Số lượng ({form.unit_name || selectedProduct?.unit_type || 'đơn vị'}) <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
                   <input
                     type="number"
                     min="1"
                     value={form.quantity}
                     onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
-                    placeholder="VD: 100"
+                    placeholder="VD: 10"
                     className="w-full py-2.5 px-3 input-themed text-sm"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Giá nhập/đơn vị <span style={{ color: 'var(--danger)' }}>*</span>
+                    Giá nhập / 1 {form.unit_name || selectedProduct?.unit_type || 'đơn vị'} <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
                   <input
                     type="number"
                     min="0"
                     value={form.unit_cost}
                     onChange={e => setForm(f => ({ ...f, unit_cost: e.target.value }))}
-                    placeholder="VD: 15000"
+                    placeholder="VD: 216000"
                     className="w-full py-2.5 px-3 input-themed text-sm"
                   />
                 </div>
               </div>
 
-              {/* Total cost preview */}
+              {/* Total cost & Conversion preview */}
               {totalCostCalc > 0 && (
-                <div className="rounded-xl p-3 flex items-center justify-between"
-                     style={{ background: 'var(--warning-bg)', border: '1px solid var(--warning-light)' }}>
-                  <span className="text-sm font-medium" style={{ color: 'var(--warning)' }}>Tổng chi phí:</span>
-                  <span className="text-lg font-bold" style={{ color: 'var(--warning)' }}>{formatCurrency(totalCostCalc)}</span>
+                <div className="rounded-xl p-3.5 space-y-1.5 animate-fade-in"
+                     style={{ background: 'var(--success-bg)', border: '1px solid var(--success-light)' }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium" style={{ color: 'var(--success)' }}>Tổng chi phí nhập:</span>
+                    <span className="text-lg font-bold" style={{ color: 'var(--success)' }}>{formatCurrency(totalCostCalc)}</span>
+                  </div>
+                  <div className="text-xs pt-2 border-t flex flex-wrap items-center justify-between gap-2"
+                       style={{ borderColor: 'var(--success-light)', color: 'var(--text-secondary)' }}>
+                    <span>
+                      👉 Tồn kho nhận: <strong style={{ color: 'var(--text-primary)' }}>+{baseQuantityCalc} {selectedProduct?.unit_type || 'đơn vị lẻ'}</strong>
+                    </span>
+                    {Number(form.conversion_rate) > 1 && (
+                      <span>
+                        Giá vốn quy đổi: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(costPerBaseUnitCalc)} / {selectedProduct?.unit_type || 'đơn vị'}</strong>
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
 

@@ -275,13 +275,29 @@ export default function OrderHistory() {
                           {items.map((item, i) => (
                             <tr key={i} style={{ borderTop: '1px solid var(--border-secondary)' }}>
                               <td className="py-2.5 px-3">
-                                <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>{item.product_name}</span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>{item.product_name}</span>
+                                  {item.unit_name && (
+                                    <span className="px-1.5 py-0.5 rounded text-xs font-semibold"
+                                          style={{ background: 'var(--brand-light)', color: 'var(--brand-primary)', border: '1px solid var(--brand-subtle)' }}>
+                                      {item.unit_name}
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-2.5 px-3 text-right" style={{ color: 'var(--text-secondary)' }}>{formatPrice(item.price)}</td>
                               <td className="py-2.5 px-3 text-right hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>
                                 {item.cost_price ? formatPrice(item.cost_price) : '—'}
                               </td>
-                              <td className="py-2.5 px-3 text-center" style={{ color: 'var(--text-secondary)' }}>{item.quantity}</td>
+                              <td className="py-2.5 px-3 text-center" style={{ color: 'var(--text-secondary)' }}>
+                                <span className="font-semibold">{item.quantity}</span>
+                                {item.unit_name && <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>{item.unit_name}</span>}
+                                {item.conversion_rate > 1 && (
+                                  <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                                    (= {item.base_quantity || (item.quantity * item.conversion_rate)} lẻ)
+                                  </div>
+                                )}
+                              </td>
                               <td className="py-2.5 px-3 text-right font-bold" style={{ color: 'var(--text-primary)' }}>
                                 {formatPrice(item.price * item.quantity)}
                               </td>

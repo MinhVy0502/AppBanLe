@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, Component } from 'react';
 import ShelfManager from './components/ShelfManager';
 import Checkout from './components/Checkout';
 import Inventory from './components/Inventory';
@@ -6,6 +6,49 @@ import Dashboard from './components/Dashboard';
 import OrderHistory from './components/OrderHistory';
 import Customers from './components/Customers';
 import ImportGoods from './components/ImportGoods';
+
+class TabErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Lỗi giao diện:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 max-w-xl mx-auto my-12 text-center card-themed animate-fade-in">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
+               style={{ background: 'var(--danger-bg)', color: 'var(--danger)' }}>
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+            Có lỗi khi hiển thị mục này
+          </h3>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+            {this.state.error?.message || 'Vui lòng bấm thử lại hoặc liên hệ hỗ trợ.'}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="btn-primary"
+          >
+            Thử lại
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /* ===================================================================
    SVG ICONS
@@ -270,13 +313,15 @@ export default function App() {
 
           {/* Main content */}
           <main className="animate-fade-in" key={activeTab}>
-            {activeTab === 'dashboard' && <Dashboard />}
-            {activeTab === 'shelves' && <ShelfManager />}
-            {activeTab === 'imports' && <ImportGoods />}
-            {activeTab === 'checkout' && <Checkout />}
-            {activeTab === 'orders' && <OrderHistory />}
-            {activeTab === 'customers' && <Customers />}
-            {activeTab === 'inventory' && <Inventory />}
+            <TabErrorBoundary key={activeTab}>
+              {activeTab === 'dashboard' && <Dashboard />}
+              {activeTab === 'shelves' && <ShelfManager />}
+              {activeTab === 'imports' && <ImportGoods />}
+              {activeTab === 'checkout' && <Checkout />}
+              {activeTab === 'orders' && <OrderHistory />}
+              {activeTab === 'customers' && <Customers />}
+              {activeTab === 'inventory' && <Inventory />}
+            </TabErrorBoundary>
           </main>
         </div>
       </ThemeContext.Provider>

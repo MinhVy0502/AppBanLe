@@ -59,6 +59,12 @@ const Product = sequelize.define('Product', {
     defaultValue: 1,
     comment: 'Số đơn vị lẻ trong 1 gói đóng gói. VD: Lốc 6 → 6, Thùng 24 → 24, Dây 12 → 12',
   },
+  allow_retail: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+    comment: 'Cho phép bán lẻ (true) hoặc chỉ bán nguyên thùng/quy cách (false)',
+  },
 }, {
   tableName: 'Product',
   timestamps: false,
