@@ -79,9 +79,10 @@ async function startServer() {
     const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
     await sequelize.sync(syncOptions);
 
-    // Đảm bảo cột mới được thêm trên Cloud DB (Render / Neon / Supabase) kể cả ở production
+    // Đảm bảo các cột mới được thêm trên Cloud DB (Render / Neon / Supabase) kể cả ở production
     try {
-      await sequelize.query(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "allow_retail" BOOLEAN DEFAULT true;`);
+      await sequelize.query(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "allow_retail" BOOLEAN DEFAULT true;`);
+      await sequelize.query(`ALTER TABLE "Batch" ADD COLUMN IF NOT EXISTS "manufacturing_date" DATE;`);
     } catch (e) {
       // Bỏ qua nếu chưa có bảng
     }
