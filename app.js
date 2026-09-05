@@ -78,6 +78,13 @@ async function startServer() {
     // Đồng bộ bảng (alter: true chỉ dùng trong development)
     const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
     await sequelize.sync(syncOptions);
+
+    // Đảm bảo cột mới được thêm trên Cloud DB (Render / Neon / Supabase) kể cả ở production
+    try {
+      await sequelize.query(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "allow_retail" BOOLEAN DEFAULT true;`);
+    } catch (e) {
+      // Bỏ qua nếu chưa có bảng
+    }
     console.log('✅ Đồng bộ các bảng thành công!');
 
     // Khởi chạy Express server (0.0.0.0 = cho phép truy cập từ mạng LAN)
