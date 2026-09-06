@@ -292,41 +292,76 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ==================== BIỂU ĐỒ DOANH THU ==================== */}
         <div className="lg:col-span-2 card-themed p-5 sm:p-6 animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
-          <div className="flex items-center gap-2 mb-5">
-            <ChartIcon className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
-            <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Doanh thu theo tháng</h2>
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <ChartIcon className="w-5 h-5" style={{ color: 'var(--brand-primary)' }} />
+              <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Doanh thu theo tháng</h2>
+            </div>
+            {maxRevenue > 1 && (
+              <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: 'var(--bg-inset)', color: 'var(--text-secondary)' }}>
+                Cao nhất: <span style={{ color: 'var(--brand-primary)' }}>{formatPrice(maxRevenue)}</span>
+              </span>
+            )}
           </div>
 
           {/* Bar chart */}
-          <div className="flex items-end gap-1.5 sm:gap-2 h-44 sm:h-52 mb-3">
+          <div className="relative flex items-end gap-1.5 sm:gap-2 h-48 sm:h-56 mb-3 pt-6">
+            {/* Background grid lines */}
+            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-1 opacity-20">
+              <div className="border-b border-dashed" style={{ borderColor: 'var(--text-muted)' }} />
+              <div className="border-b border-dashed" style={{ borderColor: 'var(--text-muted)' }} />
+              <div className="border-b border-dashed" style={{ borderColor: 'var(--text-muted)' }} />
+              <div className="border-b" style={{ borderColor: 'var(--border-secondary)' }} />
+            </div>
+
             {monthlyData.map((m, i) => {
               const height = maxRevenue > 0 ? (m.revenue / maxRevenue) * 100 : 0;
               const isCurrentMonth = i === monthlyData.length - 1;
               return (
-                <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group relative">
+                <div key={m.month} className="flex-1 flex flex-col items-center justify-end h-full group relative z-10">
                   {/* Tooltip */}
-                  <div className="absolute bottom-full mb-2 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10"
-                       style={{ background: 'var(--text-primary)', boxShadow: 'var(--shadow-lg)' }}>
-                    <p className="font-bold border-b border-white/20 pb-1 mb-1">{getMonthLabel(m.month)}</p>
-                    <p>DT: {formatPrice(m.revenue)}</p>
-                    {m.profit > 0 && <p style={{ color: '#34d399' }}>Lãi: {formatPrice(m.profit)}</p>}
-                    <p className="opacity-75">{m.orders} đơn</p>
+                  <div className="absolute bottom-full mb-2 text-xs rounded-xl px-3 py-2.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-30 shadow-2xl"
+                       style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', color: '#f8fafc', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)' }}>
+                    <p className="font-bold border-b border-white/10 pb-1 mb-1 text-white">{getMonthLabel(m.month)}</p>
+                    <p className="font-medium text-emerald-400">DT: {formatPrice(m.revenue)}</p>
+                    {m.profit > 0 && <p className="text-emerald-300">Lãi: {formatPrice(m.profit)}</p>}
+                    <p className="opacity-75 text-[11px] mt-0.5 text-slate-300">{m.orders} đơn hàng</p>
                   </div>
+
+                  {/* Revenue text badge above bar */}
+                  {m.revenue > 0 && (
+                    <span className="text-[10px] sm:text-xs font-bold pb-1 text-center whitespace-nowrap transition-transform duration-200 group-hover:scale-110"
+                          style={{ color: isCurrentMonth ? 'var(--brand-primary)' : '#60a5fa' }}>
+                      {m.revenue >= 1000000
+                        ? `${(m.revenue / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} tr`
+                        : `${Math.round(m.revenue / 1000)}k`}
+                    </span>
+                  )}
+
                   {/* Bar */}
                   <div
                     className="w-full rounded-t-lg transition-all duration-500 cursor-pointer"
                     style={{
-                      height: `${Math.max(height, 2)}%`,
+                      height: `${Math.max(height, 3)}%`,
                       background: isCurrentMonth
-                        ? 'linear-gradient(to top, var(--brand-gradient-from), var(--brand-gradient-to))'
-                        : m.revenue > 0
-                          ? 'var(--brand-light)'
-                          : 'var(--bg-inset)',
-                      boxShadow: isCurrentMonth ? 'var(--shadow-glow)' : 'none',
+                        ? (m.revenue > 0
+                            ? 'linear-gradient(to top, var(--brand-gradient-from), var(--brand-gradient-to))'
+                            : 'rgba(99, 102, 241, 0.25)')
+                        : (m.revenue > 0
+                            ? 'linear-gradient(to top, #2563eb, #60a5fa)'
+                            : 'var(--bg-inset)'),
+                      borderTop: isCurrentMonth && m.revenue === 0 ? '2px solid var(--brand-primary)' : 'none',
+                      boxShadow: isCurrentMonth && m.revenue > 0
+                        ? '0 0 16px rgba(99, 102, 241, 0.45)'
+                        : (m.revenue > 0 ? '0 0 14px rgba(59, 130, 246, 0.35)' : 'none'),
                       animationDelay: `${i * 0.05}s`,
                     }}
-                    onMouseEnter={e => { if (!isCurrentMonth && m.revenue > 0) e.currentTarget.style.background = 'linear-gradient(to top, var(--brand-gradient-from), var(--brand-gradient-to))'; }}
-                    onMouseLeave={e => { if (!isCurrentMonth && m.revenue > 0) e.currentTarget.style.background = 'var(--brand-light)'; }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.filter = 'brightness(1.18)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.filter = 'none';
+                    }}
                   />
                 </div>
               );
@@ -335,26 +370,30 @@ export default function Dashboard() {
 
           {/* Month labels */}
           <div className="flex gap-1.5 sm:gap-2">
-            {monthlyData.map((m, i) => (
-              <div key={m.month} className="flex-1 text-center">
-                <p className="text-[10px] sm:text-xs font-medium"
-                   style={{ color: i === monthlyData.length - 1 ? 'var(--brand-primary)' : 'var(--text-muted)' }}>
-                  {getShortMonth(m.month)}
-                </p>
-              </div>
-            ))}
+            {monthlyData.map((m, i) => {
+              const isCur = i === monthlyData.length - 1;
+              return (
+                <div key={m.month} className="flex-1 text-center">
+                  <p className={`text-[10px] sm:text-xs ${isCur ? 'font-bold' : 'font-medium'}`}
+                     style={{ color: isCur ? 'var(--brand-primary)' : 'var(--text-muted)' }}>
+                    {getShortMonth(m.month)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-4 mt-4 pt-4" style={{ borderTop: '1px solid var(--border-secondary)' }}>
+          <div className="flex flex-wrap items-center gap-4 mt-4 pt-4" style={{ borderTop: '1px solid var(--border-secondary)' }}>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded"
+              <div className="w-3.5 h-3.5 rounded shadow-sm"
                    style={{ background: 'linear-gradient(to top, var(--brand-gradient-from), var(--brand-gradient-to))' }} />
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Tháng hiện tại</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Tháng hiện tại</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{ background: 'var(--brand-light)' }} />
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Các tháng trước</span>
+              <div className="w-3.5 h-3.5 rounded shadow-sm"
+                   style={{ background: 'linear-gradient(to top, #2563eb, #60a5fa)' }} />
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Các tháng trước</span>
             </div>
             <div className="ml-auto text-xs" style={{ color: 'var(--text-muted)' }}>
               TB: <span className="font-bold" style={{ color: 'var(--brand-primary)' }}>{formatPrice(summary.avgMonthlyRevenue)}</span>/tháng
