@@ -456,14 +456,14 @@ export default function Checkout() {
 
           {/* Search bar */}
           <div className="relative mb-5 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
-            <SearchIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
+            <SearchIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10" style={{ color: 'var(--text-muted)' }} />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm sản phẩm..."
-              className="w-full pl-12 pr-10 py-3 input-themed"
-              style={{ boxShadow: 'var(--shadow-sm)' }}
+              className="w-full py-3 input-themed"
+              style={{ paddingLeft: '3rem', paddingRight: '2.5rem', boxShadow: 'var(--shadow-sm)' }}
             />
             {search && (
               <button
