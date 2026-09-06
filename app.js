@@ -81,9 +81,14 @@ async function startServer() {
 
     // Đảm bảo các cột mới được thêm trên Cloud DB (Render / Neon / Supabase) kể cả ở production
     try {
+      await sequelize.query(`ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "notes" TEXT;`);
       await sequelize.query(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "allow_retail" BOOLEAN DEFAULT true;`);
       await sequelize.query(`ALTER TABLE "ProductUnit" ADD COLUMN IF NOT EXISTS "is_default_import" BOOLEAN DEFAULT false;`);
       await sequelize.query(`ALTER TABLE "Batch" ADD COLUMN IF NOT EXISTS "manufacturing_date" DATE;`);
+      await sequelize.query(`ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "supplier_name" VARCHAR(255);`);
+      await sequelize.query(`ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "base_quantity" INTEGER DEFAULT 0;`);
+      await sequelize.query(`ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "unit_cost" DECIMAL(12, 2) DEFAULT 0;`);
+      await sequelize.query(`ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "note" TEXT;`);
     } catch (e) {
       // Bỏ qua nếu chưa có bảng
     }
