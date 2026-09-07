@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const { sequelize } = require('./models');
+const initDatabase = require('./config/initDatabase');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -13,8 +13,10 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const importRoutes = require('./routes/importRoutes');
 
-// Import middleware
+// Import controllers & middleware
+const authController = require('./controllers/authController');
 const authenticateToken = require('./middlewares/authenticateToken');
+const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,13 +28,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ===========================
-//  Routes
+//  API Routes
 // ===========================
 
 // Route công khai (không cần token)
 app.use('/api/auth', authRoutes);
 
-// Route bảo mật (cần token) — authenticateToken kiểm tra JWT và gắn req.store_id
+// Route bảo mật (cần JWT token) — authenticateToken kiểm tra JWT và gắn req.store_id
 app.use('/api/shelves', authenticateToken, shelfRoutes);
 app.use('/api/products', authenticateToken, productRoutes);
 app.use('/api/orders', authenticateToken, orderRoutes);
@@ -41,20 +43,18 @@ app.use('/api/customers', authenticateToken, customerRoutes);
 app.use('/api/imports', authenticateToken, importRoutes);
 app.use('/api/dashboard', authenticateToken, dashboardRoutes);
 
-// Route profile mẫu (cần token)
-app.get('/api/profile', authenticateToken, async (req, res) => {
-  const { Store } = require('./models');
+// Route profile (cần token)
+app.get('/api/profile', authenticateToken, authController.getProfile);
 
-  const store = await Store.findByPk(req.store_id, {
-    attributes: ['id', 'email', 'store_name', 'created_at'],
-  });
-
-  if (!store) {
-    return res.status(404).json({ success: false, message: 'Cửa hàng không tồn tại.' });
-  }
-
-  return res.json({ success: true, data: store });
+// 404 cho các API route không hợp lệ
+app.all('/api/{*path}', (req, res) => {
+  res.status(404).json({ success: false, message: 'API endpoint không tồn tại.' });
 });
+
+// ===========================
+//  Global Error Handler
+// ===========================
+app.use(errorHandler);
 
 // ===========================
 //  Serve Frontend (Production)
@@ -71,34 +71,13 @@ app.get('{*path}', (req, res) => {
 // ===========================
 async function startServer() {
   try {
-    // Kiểm tra kết nối database
-    await sequelize.authenticate();
-    console.log('✅ Kết nối PostgreSQL thành công!');
+    // Kết nối database & chạy auto-migrations
+    await initDatabase();
 
-    // Đồng bộ bảng (alter: true chỉ dùng trong development)
-    const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
-    await sequelize.sync(syncOptions);
-
-    // Đảm bảo các cột mới được thêm trên Cloud DB (Render / Neon / Supabase) kể cả ở production
-    try {
-      await sequelize.query(`ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "notes" TEXT;`);
-      await sequelize.query(`ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "allow_retail" BOOLEAN DEFAULT true;`);
-      await sequelize.query(`ALTER TABLE "ProductUnit" ADD COLUMN IF NOT EXISTS "is_default_import" BOOLEAN DEFAULT false;`);
-      await sequelize.query(`ALTER TABLE "Batch" ADD COLUMN IF NOT EXISTS "manufacturing_date" DATE;`);
-      await sequelize.query(`ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "supplier_name" VARCHAR(255);`);
-      await sequelize.query(`ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "base_quantity" INTEGER DEFAULT 0;`);
-      await sequelize.query(`ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "unit_cost" DECIMAL(12, 2) DEFAULT 0;`);
-      await sequelize.query(`ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "note" TEXT;`);
-    } catch (e) {
-      // Bỏ qua nếu chưa có bảng
-    }
-    console.log('✅ Đồng bộ các bảng thành công!');
-
-    // Khởi chạy Express server (0.0.0.0 = cho phép truy cập từ mạng LAN)
+    // Khởi chạy Express server (0.0.0.0 = cho phép truy cập mạng LAN)
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
     });
-
   } catch (error) {
     console.error('❌ Không thể khởi chạy server:', error.message);
     process.exit(1);
