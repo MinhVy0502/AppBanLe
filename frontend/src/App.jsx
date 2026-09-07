@@ -1,11 +1,12 @@
-import { useState, useEffect, createContext, useContext, Component } from 'react';
-import ShelfManager from './components/ShelfManager';
-import Checkout from './components/Checkout';
-import Inventory from './components/Inventory';
-import Dashboard from './components/Dashboard';
-import OrderHistory from './components/OrderHistory';
-import Customers from './components/Customers';
-import ImportGoods from './components/ImportGoods';
+import { useState, useEffect, createContext, useContext, Component, lazy, Suspense } from 'react';
+
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const ShelfManager = lazy(() => import('./components/ShelfManager'));
+const ImportGoods = lazy(() => import('./components/ImportGoods'));
+const Checkout = lazy(() => import('./components/Checkout'));
+const OrderHistory = lazy(() => import('./components/OrderHistory'));
+const Customers = lazy(() => import('./components/Customers'));
+const Inventory = lazy(() => import('./components/Inventory'));
 
 class TabErrorBoundary extends Component {
   constructor(props) {
@@ -333,13 +334,28 @@ export default function App() {
           {/* Main content */}
           <main className="animate-fade-in" key={activeTab}>
             <TabErrorBoundary key={activeTab}>
-              {activeTab === 'dashboard' && <Dashboard />}
-              {activeTab === 'shelves' && <ShelfManager />}
-              {activeTab === 'imports' && <ImportGoods />}
-              {activeTab === 'checkout' && <Checkout />}
-              {activeTab === 'orders' && <OrderHistory />}
-              {activeTab === 'customers' && <Customers />}
-              {activeTab === 'inventory' && <Inventory />}
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center py-32 animate-fade-in">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1.5 mb-4">
+                        <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: 'var(--brand-gradient-from)', animationDelay: '0s' }} />
+                        <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: 'var(--brand-gradient-to)', animationDelay: '0.2s' }} />
+                        <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: '#ec4899', animationDelay: '0.4s' }} />
+                      </div>
+                      <p style={{ color: 'var(--text-muted)' }} className="text-sm font-medium">Đang tải giao diện...</p>
+                    </div>
+                  </div>
+                }
+              >
+                {activeTab === 'dashboard' && <Dashboard />}
+                {activeTab === 'shelves' && <ShelfManager />}
+                {activeTab === 'imports' && <ImportGoods />}
+                {activeTab === 'checkout' && <Checkout />}
+                {activeTab === 'orders' && <OrderHistory />}
+                {activeTab === 'customers' && <Customers />}
+                {activeTab === 'inventory' && <Inventory />}
+              </Suspense>
             </TabErrorBoundary>
           </main>
         </div>
