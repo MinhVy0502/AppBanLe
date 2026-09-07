@@ -1,5 +1,5 @@
 /**
- * API Service — wrapper quanh fetch, tự động gắn JWT token.
+ * API Service — wrapper quanh fetch, tự động gắn JWT token và xử lý lỗi xác thực.
  */
 
 const API_BASE = '/api';
@@ -20,16 +20,36 @@ async function request(endpoint, options = {}) {
     config.body = JSON.stringify(options.body);
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, config);
-  const data = await res.json();
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`, config);
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      data = { success: false, message: 'Phản hồi từ máy chủ không hợp lệ' };
+    }
 
-  if (!res.ok) {
-    const error = new Error(data.message || 'Yêu cầu thất bại');
-    error.response = { status: res.status, data };
-    throw error;
+    if (!res.ok) {
+      // Nếu lỗi 401 (token hết hạn hoặc không hợp lệ), tự động đăng xuất và thông báo cho App
+      if (res.status === 401 && token) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('store_name');
+        window.dispatchEvent(
+          new CustomEvent('auth:expired', {
+            detail: data.message || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+          })
+        );
+      }
+
+      const error = new Error(data.message || 'Yêu cầu thất bại');
+      error.response = { status: res.status, data };
+      throw error;
+    }
+
+    return data;
+  } catch (err) {
+    throw err;
   }
-
-  return data;
 }
 
 const api = {

@@ -126,7 +126,7 @@ export function useTheme() {
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [storeName, setStoreName] = useState(localStorage.getItem('store_name') || '');
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('appbanle_active_tab') || 'dashboard');
 
   // Theme
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -146,8 +146,26 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Lắng nghe sự kiện token hết hạn từ api service
+  useEffect(() => {
+    const handleAuthExpired = (e) => {
+      setToken(null);
+      setStoreName('');
+      setError(e.detail || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      setIsLogin(true);
+    };
+
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => window.removeEventListener('auth:expired', handleAuthExpired);
+  }, []);
+
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const handleSelectTab = (tabId) => {
+    setActiveTab(tabId);
+    localStorage.setItem('appbanle_active_tab', tabId);
   };
 
   const handleAuth = async (e) => {
@@ -194,6 +212,7 @@ export default function App() {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('store_name');
+    localStorage.removeItem('appbanle_active_tab');
     setToken(null);
     setStoreName('');
     setEmail('');
@@ -279,7 +298,7 @@ export default function App() {
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => handleSelectTab(tab.id)}
                       className="relative flex items-center gap-2 px-4 py-3 text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0 group"
                       style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}
                     >
