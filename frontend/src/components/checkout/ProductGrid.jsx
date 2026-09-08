@@ -56,7 +56,7 @@ export default function ProductGrid({
       {/* Search & Filter */}
       <div className="card-themed p-4 mb-5 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
         <div className="relative mb-3">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none" style={{ color: 'var(--text-muted)' }}>
             <SearchIcon className="w-5 h-5" />
           </div>
           <input
@@ -64,7 +64,8 @@ export default function ProductGrid({
             placeholder="Tìm theo tên sản phẩm..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input-themed w-full pl-10 pr-4 py-2.5 text-sm rounded-xl"
+            className="input-themed w-full py-2.5 text-sm rounded-xl"
+            style={{ paddingLeft: '2.75rem', paddingRight: search ? '2.5rem' : '1rem' }}
           />
           {search && (
             <button

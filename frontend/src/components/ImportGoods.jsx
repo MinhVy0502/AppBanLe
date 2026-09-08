@@ -428,7 +428,7 @@ export default function ImportGoods() {
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   className="w-full py-2.5 input-themed text-sm"
-                  style={{ paddingLeft: '2.25rem' }}
+                  style={{ paddingLeft: '2.5rem' }}
                 />
               </div>
               {/* Product filter */}
