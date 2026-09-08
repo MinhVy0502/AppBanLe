@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { SearchIcon, PackageIcon, ReceiptIcon } from '../common/Icons';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { SearchIcon, PackageIcon, ReceiptIcon, ChevronLeftIcon, ChevronRightIcon } from '../common/Icons';
 import { formatPrice, getBaseUnitLabel } from '../../utils/formatters';
 
 const getStockDisplay = (product) => {
@@ -30,6 +30,86 @@ export default function ProductGrid({
   cart,
   addToCart,
 }) {
+  const shelfScrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startScrollLeftRef = useRef(0);
+  const hasDraggedRef = useRef(false);
+
+  const updateScrollButtons = useCallback(() => {
+    const el = shelfScrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = shelfScrollRef.current;
+    if (!el) return;
+
+    updateScrollButtons();
+    window.addEventListener('resize', updateScrollButtons);
+
+    // Mouse wheel horizontal scrolling
+    const onWheel = (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+        updateScrollButtons();
+      }
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      window.removeEventListener('resize', updateScrollButtons);
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, [shelves, updateScrollButtons]);
+
+  const handleScrollBy = (direction) => {
+    const el = shelfScrollRef.current;
+    if (!el) return;
+    const amount = direction === 'left' ? -240 : 240;
+    el.scrollBy({ left: amount, behavior: 'smooth' });
+    setTimeout(updateScrollButtons, 300);
+  };
+
+  const handleMouseDown = (e) => {
+    const el = shelfScrollRef.current;
+    if (!el) return;
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    startXRef.current = e.pageX - el.getBoundingClientRect().left;
+    startScrollLeftRef.current = el.scrollLeft;
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDraggingRef.current) return;
+    const el = shelfScrollRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const currentX = e.pageX - el.getBoundingClientRect().left;
+    const walk = currentX - startXRef.current;
+    if (Math.abs(walk) > 4) {
+      hasDraggedRef.current = true;
+    }
+    el.scrollLeft = startScrollLeftRef.current - walk;
+    updateScrollButtons();
+  };
+
+  const handleMouseUp = () => {
+    isDraggingRef.current = false;
+    setTimeout(() => {
+      hasDraggedRef.current = false;
+    }, 50);
+  };
+
+  const handleShelfClick = (id) => {
+    if (hasDraggedRef.current) return;
+    setSelectedShelfId(id);
+  };
   return (
     <div className="flex-1 min-w-0">
       {/* Header */}
@@ -78,77 +158,132 @@ export default function ProductGrid({
           )}
         </div>
 
-        {/* Shelf filter pills */}
-        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-          <button
-            onClick={() => setSelectedShelfId('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedShelfId === 'all' ? 'text-white' : ''
-            }`}
+        {/* Shelf filter pills with scroll navigation & drag */}
+        <div className="relative flex items-center group/pills">
+          {canScrollLeft && (
+            <div
+              className="absolute left-0 top-0 bottom-1 flex items-center z-10 pr-6 pointer-events-none"
+              style={{ background: 'linear-gradient(to right, var(--bg-surface) 50%, transparent)' }}
+            >
+              <button
+                type="button"
+                onClick={() => handleScrollBy('left')}
+                className="w-7 h-7 rounded-full flex items-center justify-center shadow-md transition-all cursor-pointer pointer-events-auto hover:scale-110 active:scale-95"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-primary)',
+                  color: 'var(--text-primary)',
+                }}
+                title="Cuộn sang trái"
+              >
+                <ChevronLeftIcon className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <div
+            ref={shelfScrollRef}
+            onScroll={updateScrollButtons}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            className="flex gap-2 overflow-x-auto pb-1.5 select-none custom-scrollbar cursor-grab active:cursor-grabbing w-full scroll-smooth"
             style={{
-              background: selectedShelfId === 'all' ? 'var(--brand-primary)' : 'var(--bg-inset)',
-              color: selectedShelfId === 'all' ? '#fff' : 'var(--text-secondary)',
+              scrollbarWidth: 'thin',
             }}
           >
-            Tất cả
-            <span
-              className="px-1.5 py-0.2 rounded-full text-[10px]"
+            <button
+              onClick={() => handleShelfClick('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
+                selectedShelfId === 'all' ? 'text-white' : ''
+              }`}
               style={{
-                background: selectedShelfId === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-surface)',
+                background: selectedShelfId === 'all' ? 'var(--brand-primary)' : 'var(--bg-inset)',
+                color: selectedShelfId === 'all' ? '#fff' : 'var(--text-secondary)',
               }}
             >
-              {shelfProductCounts.all}
-            </span>
-          </button>
-
-          {shelves.map((s) => {
-            const count = shelfProductCounts[s.id] || 0;
-            const isSelected = selectedShelfId === String(s.id);
-            return (
-              <button
-                key={s.id}
-                onClick={() => setSelectedShelfId(String(s.id))}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-                  isSelected ? 'text-white' : ''
-                }`}
+              Tất cả
+              <span
+                className="px-1.5 py-0.2 rounded-full text-[10px]"
                 style={{
-                  background: isSelected ? 'var(--brand-primary)' : 'var(--bg-inset)',
-                  color: isSelected ? '#fff' : 'var(--text-secondary)',
+                  background: selectedShelfId === 'all' ? 'rgba(255,255,255,0.25)' : 'var(--bg-surface)',
                 }}
               >
-                {s.shelf_name}
-                <span
-                  className="px-1.5 py-0.2 rounded-full text-[10px]"
+                {shelfProductCounts.all}
+              </span>
+            </button>
+
+            {shelves.map((s) => {
+              const count = shelfProductCounts[s.id] || 0;
+              const isSelected = selectedShelfId === String(s.id);
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => handleShelfClick(String(s.id))}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
+                    isSelected ? 'text-white' : ''
+                  }`}
                   style={{
-                    background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-surface)',
+                    background: isSelected ? 'var(--brand-primary)' : 'var(--bg-inset)',
+                    color: isSelected ? '#fff' : 'var(--text-secondary)',
                   }}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                  {s.shelf_name}
+                  <span
+                    className="px-1.5 py-0.2 rounded-full text-[10px]"
+                    style={{
+                      background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-surface)',
+                    }}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
 
-          <button
-            onClick={() => setSelectedShelfId('none')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedShelfId === 'none' ? 'text-white' : ''
-            }`}
-            style={{
-              background: selectedShelfId === 'none' ? 'var(--brand-primary)' : 'var(--bg-inset)',
-              color: selectedShelfId === 'none' ? '#fff' : 'var(--text-secondary)',
-            }}
-          >
-            Chưa xếp kệ
-            <span
-              className="px-1.5 py-0.2 rounded-full text-[10px]"
+            <button
+              onClick={() => handleShelfClick('none')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
+                selectedShelfId === 'none' ? 'text-white' : ''
+              }`}
               style={{
-                background: selectedShelfId === 'none' ? 'rgba(255,255,255,0.25)' : 'var(--bg-surface)',
+                background: selectedShelfId === 'none' ? 'var(--brand-primary)' : 'var(--bg-inset)',
+                color: selectedShelfId === 'none' ? '#fff' : 'var(--text-secondary)',
               }}
             >
-              {shelfProductCounts.none}
-            </span>
-          </button>
+              Chưa xếp kệ
+              <span
+                className="px-1.5 py-0.2 rounded-full text-[10px]"
+                style={{
+                  background: selectedShelfId === 'none' ? 'rgba(255,255,255,0.25)' : 'var(--bg-surface)',
+                }}
+              >
+                {shelfProductCounts.none}
+              </span>
+            </button>
+          </div>
+
+          {canScrollRight && (
+            <div
+              className="absolute right-0 top-0 bottom-1 flex items-center z-10 pl-6 pointer-events-none"
+              style={{ background: 'linear-gradient(to left, var(--bg-surface) 50%, transparent)' }}
+            >
+              <button
+                type="button"
+                onClick={() => handleScrollBy('right')}
+                className="w-7 h-7 rounded-full flex items-center justify-center shadow-md transition-all cursor-pointer pointer-events-auto hover:scale-110 active:scale-95"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-primary)',
+                  color: 'var(--text-primary)',
+                }}
+                title="Cuộn sang phải"
+              >
+                <ChevronRightIcon className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
