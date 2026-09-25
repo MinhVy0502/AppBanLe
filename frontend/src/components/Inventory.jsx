@@ -528,7 +528,7 @@ export default function Inventory() {
                       onClick={() => deleteBatch(batch.id)}
                       disabled={deletingBatchId === batch.id}
                       title="Xóa lô"
-                      className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover/batch:opacity-100 transition-all cursor-pointer disabled:opacity-50 flex-shrink-0"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover/batch:opacity-100 transition-all cursor-pointer disabled:opacity-50 flex-shrink-0"
                       style={{ color: 'var(--danger)' }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.borderColor = 'var(--danger-light)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}

@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../services/api';
+import CameraScannerModal from './checkout/CameraScannerModal';
+import { exportImportsToExcel } from '../utils/excelExport';
+import PrintableA4Report from './common/PrintableA4Report';
 
 /* ===================================================================
    SVG ICONS
@@ -59,6 +62,26 @@ const SearchIcon = ({ className = 'w-4 h-4' }) => (
   </svg>
 );
 
+const BarcodeScanIcon = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.008v.008H6.75V6.75zM6.75 16.5h.008v.008H6.75V16.5zM16.5 6.75h.008v.008H16.5V6.75zM13.5 13.5h3.75m-3.75 3.75h3.75m0-3.75v3.75m3.75-3.75v3.75" />
+  </svg>
+);
+
+const DocumentExcelIcon = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 13.5l3 3m0 0l3-3m-3 3v-6" />
+  </svg>
+);
+
+const PrinterIcon = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24-1.076-.641-2.072-1.182-2.956M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+  </svg>
+);
+
 /* ===================================================================
    HELPERS
    =================================================================== */
@@ -83,12 +106,17 @@ const formatDateTime = (dateStr) => {
    =================================================================== */
 export default function ImportGoods() {
   const [products, setProducts] = useState([]);
+  const [shelves, setShelves] = useState([]);
   const [imports, setImports] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Modal
+  // A4 Print Report Modal
+  const [showA4Report, setShowA4Report] = useState(false);
+
+  // Modal Nhập Hàng
   const [showModal, setShowModal] = useState(false);
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [form, setForm] = useState({
     product_id: '',
     supplier_name: '',
@@ -101,6 +129,26 @@ export default function ImportGoods() {
   });
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+
+  // Import Mode: 'existing' (chọn hàng có sẵn) | 'new_product' (tạo món mới & nhập kho)
+  const [importMode, setImportMode] = useState('existing');
+  const [quickForm, setQuickForm] = useState({
+    product_name: '',
+    price: '',
+    shelf_id: '',
+    barcode: '',
+    unit_type: 'lon',
+    has_pack: false,
+    pack_name: 'Thùng',
+    pack_rate: 24,
+    pack_price: '',
+    import_unit: 'pack', // 'pack' | 'base'
+    quantity: '',
+    unit_cost: '',
+    supplier_name: '',
+    import_date: new Date().toISOString().split('T')[0],
+    note: '',
+  });
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,14 +173,16 @@ export default function ImportGoods() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [prodRes, importRes, statsRes] = await Promise.all([
+      const [prodRes, importRes, statsRes, shelfRes] = await Promise.all([
         api.get('/products'),
         api.get('/imports'),
         api.get('/imports/stats'),
+        api.get('/shelves'),
       ]);
       setProducts(prodRes.data);
       setImports(importRes.data);
       setStats(statsRes.data);
+      setShelves(shelfRes.data || []);
     } catch (err) {
       console.error('Lỗi tải dữ liệu:', err);
     }
@@ -167,6 +217,142 @@ export default function ImportGoods() {
         unit_cost: prod.cost_price ? String(prod.cost_price) : '',
       }));
     }
+  };
+
+  const handleScanBarcode = (barcode) => {
+    const rawBarcode = String(barcode || '').trim();
+    if (!rawBarcode) return;
+    const clean = rawBarcode.toLowerCase();
+    const prod = products.find(p => p.barcode && String(p.barcode).trim().toLowerCase() === clean);
+
+    setShowCameraScanner(false);
+
+    if (prod) {
+      if (importMode === 'new_product') {
+        showToast(`Mã vạch này đã có: "${prod.product_name}". Đã chuyển sang nhập hàng có sẵn!`, 'warning');
+      } else {
+        showToast(`Đã nhận diện: ${prod.product_name}`, 'success');
+      }
+      setImportMode('existing');
+      handleProductChange(prod.id);
+    } else {
+      setQuickForm(f => ({
+        ...f,
+        barcode: rawBarcode,
+      }));
+      setImportMode('new_product');
+      showToast(`Đã nhận diện mã vạch: "${rawBarcode}"!`, 'success');
+    }
+  };
+
+  // Tạo sản phẩm mới và lập phiếu nhập kho đầu tiên trong 1 thao tác duy nhất
+  const handleCreateNewProductAndImport = async () => {
+    if (!quickForm.product_name.trim()) {
+      showToast('Vui lòng nhập Tên sản phẩm.', 'error');
+      return;
+    }
+    if (!quickForm.price || Number(quickForm.price) <= 0) {
+      showToast('Vui lòng nhập Giá bán lẻ hợp lệ cho sản phẩm.', 'error');
+      return;
+    }
+    if (!quickForm.quantity || Number(quickForm.quantity) <= 0) {
+      showToast('Vui lòng nhập Số lượng hàng nhập kho.', 'error');
+      return;
+    }
+    if (!quickForm.unit_cost || Number(quickForm.unit_cost) < 0) {
+      showToast('Vui lòng nhập Giá nhập hàng.', 'error');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const units = [];
+      const hasPack = quickForm.has_pack && quickForm.pack_name.trim() && Number(quickForm.pack_rate) > 1;
+      const isPackImport = hasPack && quickForm.import_unit === 'pack';
+
+      if (hasPack) {
+        units.push({
+          unit_name: quickForm.pack_name.trim(),
+          conversion_rate: Number(quickForm.pack_rate),
+          price: quickForm.pack_price ? Number(quickForm.pack_price) : 0,
+          cost_price: isPackImport ? Number(quickForm.unit_cost) : 0,
+          is_default_import: isPackImport,
+        });
+      }
+
+      // 1. Tạo sản phẩm mới
+      const prodRes = await api.post('/products', {
+        product_name: quickForm.product_name.trim(),
+        price: Number(quickForm.price),
+        cost_price: isPackImport
+          ? Math.round(Number(quickForm.unit_cost) / Number(quickForm.pack_rate))
+          : Number(quickForm.unit_cost),
+        shelf_id: quickForm.shelf_id ? Number(quickForm.shelf_id) : null,
+        barcode: quickForm.barcode ? quickForm.barcode.trim() : null,
+        unit_type: quickForm.unit_type?.trim() || 'cái',
+        allow_retail: true,
+        stock: 0,
+        units,
+      });
+
+      const newProduct = prodRes.data;
+
+      // 2. Lập tức tạo phiếu nhập kho đầu tiên cho sản phẩm này
+      const importUnitName = isPackImport ? quickForm.pack_name.trim() : (quickForm.unit_type?.trim() || 'cái');
+      const importConversionRate = isPackImport ? Number(quickForm.pack_rate) : 1;
+
+      await api.post('/imports', {
+        product_id: newProduct.id,
+        quantity: Number(quickForm.quantity),
+        unit_cost: Number(quickForm.unit_cost),
+        unit_name: importUnitName,
+        conversion_rate: importConversionRate,
+        supplier_name: quickForm.supplier_name?.trim() || null,
+        import_date: quickForm.import_date || new Date().toISOString().split('T')[0],
+        note: quickForm.note?.trim() || 'Nhập hàng lần đầu khi tạo sản phẩm',
+      });
+
+      showToast(`Đã tạo sản phẩm "${newProduct.product_name}" và nhập kho thành công!`);
+      setShowModal(false);
+      setImportMode('existing');
+      setQuickForm({
+        product_name: '',
+        price: '',
+        shelf_id: '',
+        barcode: '',
+        unit_type: 'lon',
+        has_pack: false,
+        pack_name: 'Thùng',
+        pack_rate: 24,
+        pack_price: '',
+        import_unit: 'pack',
+        quantity: '',
+        unit_cost: '',
+        supplier_name: '',
+        import_date: new Date().toISOString().split('T')[0],
+        note: '',
+      });
+      await fetchAll();
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Lỗi khi tạo sản phẩm & nhập hàng.', 'error');
+    }
+    setCreating(false);
+  };
+
+  const storeName = localStorage.getItem('store_name') || 'CỬA HÀNG BÁN LẺ';
+
+  // Xuất Excel (.xlsx) chuẩn Thuế TT 88/2021
+  const handleExportExcel = () => {
+    if (filteredImports.length === 0) {
+      showToast('Không có dữ liệu phiếu nhập để xuất Excel.', 'error');
+      return;
+    }
+    exportImportsToExcel(filteredImports, {
+      storeName,
+      fromDate: filterFrom,
+      toDate: filterTo,
+    });
+    showToast('Đã xuất file Excel Bảng kê nhập hàng!');
   };
 
   // ---- Handlers ----
@@ -241,6 +427,27 @@ export default function ImportGoods() {
     return r > 0 ? (u / r) : u;
   }, [form.unit_cost, form.conversion_rate]);
 
+  // Computed cho tạo nhanh món mới & nhập kho
+  const quickTotalCost = useMemo(() => {
+    const q = Number(quickForm.quantity) || 0;
+    const u = Number(quickForm.unit_cost) || 0;
+    return q * u;
+  }, [quickForm.quantity, quickForm.unit_cost]);
+
+  const quickBaseQuantity = useMemo(() => {
+    const q = Number(quickForm.quantity) || 0;
+    const hasPack = quickForm.has_pack && quickForm.pack_name.trim() && Number(quickForm.pack_rate) > 1;
+    const r = (hasPack && quickForm.import_unit === 'pack') ? (Number(quickForm.pack_rate) || 1) : 1;
+    return q * r;
+  }, [quickForm.quantity, quickForm.has_pack, quickForm.pack_name, quickForm.pack_rate, quickForm.import_unit]);
+
+  const quickCostPerBase = useMemo(() => {
+    const q = Number(quickForm.quantity) || 0;
+    const u = Number(quickForm.unit_cost) || 0;
+    const total = q * u;
+    return quickBaseQuantity > 0 ? Math.round(total / quickBaseQuantity) : 0;
+  }, [quickForm.quantity, quickForm.unit_cost, quickBaseQuantity]);
+
   const filteredImports = useMemo(() => {
     let list = imports;
     if (filterProduct) {
@@ -313,11 +520,11 @@ export default function ImportGoods() {
       )}
 
       {/* ===== HEADER ===== */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
             <span className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
                    style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
                 <TruckIcon className="w-5 h-5 text-white" />
               </div>
@@ -325,19 +532,44 @@ export default function ImportGoods() {
             </span>
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Quản lý nhập hàng và theo dõi chi phí từng đợt
+            Quản lý nhập kho, chi phí đầu vào và xuất bảng kê thuế
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 cursor-pointer"
-          style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 25px rgba(16, 185, 129, 0.4)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)'; }}
-        >
-          <PlusIcon className="w-4 h-4" />
-          Nhập hàng mới
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Nút Xuất Excel */}
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold border border-emerald-500/30 hover:border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 transition-all cursor-pointer shadow-sm"
+            title="Xuất file Excel chuẩn Mẫu S2-HKD"
+          >
+            <DocumentExcelIcon />
+            Xuất Excel (.xlsx)
+          </button>
+
+          {/* Nút In bảng kê A4 / PDF */}
+          <button
+            onClick={() => setShowA4Report(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold border border-slate-600 hover:border-slate-400 text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shadow-sm"
+            title="In bảng kê A4 hoặc lưu PDF"
+          >
+            <PrinterIcon />
+            In bảng kê (A4/PDF)
+          </button>
+
+          {/* Nút Nhập hàng mới */}
+          <button
+            onClick={() => {
+              setImportMode('existing');
+              setShowModal(true);
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer"
+            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}
+          >
+            <PlusIcon className="w-4 h-4" />
+            Nhập hàng mới
+          </button>
+        </div>
       </div>
 
       {/* ===== STAT CARDS ===== */}
@@ -713,7 +945,7 @@ export default function ImportGoods() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
              style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
              onClick={() => setShowModal(false)}>
-          <div className="w-full max-w-lg rounded-2xl overflow-hidden animate-fade-in-up"
+          <div className="w-full max-w-xl rounded-2xl overflow-hidden animate-fade-in-up"
                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-primary)', boxShadow: 'var(--shadow-xl)' }}
                onClick={e => e.stopPropagation()}>
 
@@ -725,7 +957,14 @@ export default function ImportGoods() {
                      style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
                   <TruckIcon className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Nhập hàng mới</h2>
+                <div>
+                  <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                    {importMode === 'existing' ? 'Nhập hàng vào kho' : 'Tạo sản phẩm & Nhập kho'}
+                  </h2>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {importMode === 'existing' ? 'Lập phiếu nhập cho sản phẩm đã có' : 'Tạo món mới và ghi nhận lô hàng nhập đầu tiên'}
+                  </p>
+                </div>
               </div>
               <button onClick={() => setShowModal(false)}
                       className="p-2 rounded-lg transition-colors cursor-pointer"
@@ -736,191 +975,573 @@ export default function ImportGoods() {
               </button>
             </div>
 
-            {/* Body */}
-            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
-              {/* Product */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Sản phẩm <span style={{ color: 'var(--danger)' }}>*</span>
-                </label>
-                <select
-                  value={form.product_id}
-                  onChange={e => handleProductChange(e.target.value)}
-                  className="w-full py-2.5 px-3 input-themed text-sm cursor-pointer"
-                >
-                  <option value="">— Chọn sản phẩm —</option>
-                  {products.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.product_name} (Kho: {p.stock} {p.unit_type || ''})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Mode Switch Tabs */}
+            <div className="flex p-1 mx-6 mt-3.5 rounded-xl bg-zinc-800/70 border border-zinc-700/50">
+              <button
+                type="button"
+                onClick={() => setImportMode('existing')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  importMode === 'existing'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <span>📦 Nhập hàng có sẵn</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportMode('new_product')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  importMode === 'new_product'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <span>✨ Thêm món mới & Nhập kho</span>
+              </button>
+            </div>
 
-              {/* Đơn vị nhập hàng */}
-              {selectedProduct && (
-                <div className="animate-fade-in">
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Đơn vị nhập hàng <span style={{ color: 'var(--danger)' }}>*</span>
-                  </label>
-                  <select
-                    value={`${form.unit_name || ''}_${form.conversion_rate || 1}`}
-                    onChange={(e) => {
-                      const [uName, uRateStr] = e.target.value.split('_');
-                      const rate = Number(uRateStr) || 1;
-                      const matchingUnit = (selectedProduct.units || []).find(u => u.unit_name === uName);
-                      setForm(f => ({
-                        ...f,
-                        unit_name: uName,
-                        conversion_rate: rate,
-                        unit_cost: matchingUnit && matchingUnit.cost_price ? String(matchingUnit.cost_price) : f.unit_cost,
-                      }));
-                    }}
-                    className="w-full py-2.5 px-3 input-themed text-sm cursor-pointer font-medium"
+            {importMode === 'existing' ? (
+              <>
+                {/* Body: Existing product */}
+                <div className="px-6 py-4 space-y-4 max-h-[65vh] overflow-y-auto custom-scrollbar">
+                  {/* Product */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                        Sản phẩm <span style={{ color: 'var(--danger)' }}>*</span>
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setImportMode('new_product')}
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20"
+                        >
+                          + Món mới
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCameraScanner(true)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all"
+                          style={{
+                            background: 'var(--brand-light)',
+                            color: 'var(--brand-primary)',
+                            border: '1px solid var(--brand-lighter)',
+                          }}
+                        >
+                          <BarcodeScanIcon className="w-3.5 h-3.5" />
+                          Quét mã
+                        </button>
+                      </div>
+                    </div>
+
+                    <select
+                      value={form.product_id}
+                      onChange={e => handleProductChange(e.target.value)}
+                      className="w-full py-2.5 px-3 input-themed text-sm cursor-pointer"
+                    >
+                      <option value="">— Chọn sản phẩm trong kho —</option>
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.product_name} (Kho: {p.stock} {p.unit_type || ''})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Đơn vị nhập hàng */}
+                  {selectedProduct && (
+                    <div className="animate-fade-in">
+                      <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                        Đơn vị nhập hàng <span style={{ color: 'var(--danger)' }}>*</span>
+                      </label>
+                      <select
+                        value={`${form.unit_name || ''}_${form.conversion_rate || 1}`}
+                        onChange={(e) => {
+                          const [uName, uRateStr] = e.target.value.split('_');
+                          const rate = Number(uRateStr) || 1;
+                          const matchingUnit = (selectedProduct.units || []).find(u => u.unit_name === uName);
+                          setForm(f => ({
+                            ...f,
+                            unit_name: uName,
+                            conversion_rate: rate,
+                            unit_cost: matchingUnit && matchingUnit.cost_price ? String(matchingUnit.cost_price) : f.unit_cost,
+                          }));
+                        }}
+                        className="w-full py-2.5 px-3 input-themed text-sm cursor-pointer font-medium"
+                      >
+                        {(selectedProduct.units || []).map(u => (
+                          <option key={u.id || u.unit_name} value={`${u.unit_name}_${u.conversion_rate}`}>
+                            📦 {u.unit_name} (1 {u.unit_name.toLowerCase()} = {u.conversion_rate} {selectedProduct.unit_type || 'lẻ'})
+                            {u.cost_price > 0 ? ` — Giá nhập gợi ý: ${formatCurrency(u.cost_price)}` : ''}
+                          </option>
+                        ))}
+                        <option value={`${selectedProduct.unit_type || 'cái'}_1`}>
+                          🔹 {selectedProduct.unit_type || 'Đơn vị lẻ'} (Đơn vị lẻ cơ sở)
+                          {selectedProduct.cost_price > 0 ? ` — Giá vốn: ${formatCurrency(selectedProduct.cost_price)}` : ''}
+                        </option>
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Quantity & Unit cost */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                        Số lượng ({form.unit_name || selectedProduct?.unit_type || 'đơn vị'}) <span style={{ color: 'var(--danger)' }}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.quantity}
+                        onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
+                        placeholder="VD: 10"
+                        className="w-full py-2.5 px-3 input-themed text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                        Giá nhập / 1 {form.unit_name || selectedProduct?.unit_type || 'đơn vị'} <span style={{ color: 'var(--danger)' }}>*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.unit_cost}
+                        onChange={e => setForm(f => ({ ...f, unit_cost: e.target.value }))}
+                        placeholder="VD: 216000"
+                        className="w-full py-2.5 px-3 input-themed text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Total cost & Conversion preview */}
+                  {totalCostCalc > 0 && (
+                    <div className="rounded-xl p-3.5 space-y-1.5 animate-fade-in"
+                         style={{ background: 'var(--success-bg)', border: '1px solid var(--success-light)' }}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium" style={{ color: 'var(--success)' }}>Tổng chi phí nhập:</span>
+                        <span className="text-lg font-bold" style={{ color: 'var(--success)' }}>{formatCurrency(totalCostCalc)}</span>
+                      </div>
+                      <div className="text-xs pt-2 border-t flex flex-wrap items-center justify-between gap-2"
+                           style={{ borderColor: 'var(--success-light)', color: 'var(--text-secondary)' }}>
+                        <span>
+                          👉 Tồn kho nhận: <strong style={{ color: 'var(--text-primary)' }}>+{baseQuantityCalc} {selectedProduct?.unit_type || 'đơn vị lẻ'}</strong>
+                        </span>
+                        {Number(form.conversion_rate) > 1 && (
+                          <span>
+                            Giá vốn quy đổi: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(costPerBaseUnitCalc)} / {selectedProduct?.unit_type || 'đơn vị'}</strong>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Supplier & Date */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                        Nhà cung cấp
+                      </label>
+                      <input
+                        type="text"
+                        value={form.supplier_name}
+                        onChange={e => setForm(f => ({ ...f, supplier_name: e.target.value }))}
+                        placeholder="VD: Đại lý Minh Phát"
+                        className="w-full py-2.5 px-3 input-themed text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                        Ngày nhập
+                      </label>
+                      <input
+                        type="date"
+                        value={form.import_date}
+                        onChange={e => setForm(f => ({ ...f, import_date: e.target.value }))}
+                        className="w-full py-2.5 px-3 input-themed text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Note */}
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                      Ghi chú
+                    </label>
+                    <textarea
+                      value={form.note}
+                      onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
+                      placeholder="VD: Nhập thêm hàng Tết..."
+                      rows={2}
+                      className="w-full py-2.5 px-3 input-themed text-sm resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Footer for Existing */}
+                <div className="flex items-center justify-end gap-3 px-6 py-4"
+                     style={{ borderTop: '1px solid var(--border-secondary)' }}>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+                    style={{ color: 'var(--text-secondary)', background: 'var(--bg-inset)' }}
                   >
-                    {/* Packaging units first */}
-                    {(selectedProduct.units || []).map(u => (
-                      <option key={u.id || u.unit_name} value={`${u.unit_name}_${u.conversion_rate}`}>
-                        📦 {u.unit_name} (1 {u.unit_name.toLowerCase()} = {u.conversion_rate} {selectedProduct.unit_type || 'lẻ'})
-                        {u.cost_price > 0 ? ` — Giá nhập gợi ý: ${formatCurrency(u.cost_price)}` : ''}
-                      </option>
-                    ))}
-                    {/* Base unit */}
-                    <option value={`${selectedProduct.unit_type || 'cái'}_1`}>
-                      🔹 {selectedProduct.unit_type || 'Đơn vị lẻ'} (Đơn vị lẻ cơ sở)
-                      {selectedProduct.cost_price > 0 ? ` — Giá vốn: ${formatCurrency(selectedProduct.cost_price)}` : ''}
-                    </option>
-                  </select>
-                </div>
-              )}
-
-              {/* Quantity & Unit cost */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Số lượng ({form.unit_name || selectedProduct?.unit_type || 'đơn vị'}) <span style={{ color: 'var(--danger)' }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={form.quantity}
-                    onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
-                    placeholder="VD: 10"
-                    className="w-full py-2.5 px-3 input-themed text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Giá nhập / 1 {form.unit_name || selectedProduct?.unit_type || 'đơn vị'} <span style={{ color: 'var(--danger)' }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.unit_cost}
-                    onChange={e => setForm(f => ({ ...f, unit_cost: e.target.value }))}
-                    placeholder="VD: 216000"
-                    className="w-full py-2.5 px-3 input-themed text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Total cost & Conversion preview */}
-              {totalCostCalc > 0 && (
-                <div className="rounded-xl p-3.5 space-y-1.5 animate-fade-in"
-                     style={{ background: 'var(--success-bg)', border: '1px solid var(--success-light)' }}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium" style={{ color: 'var(--success)' }}>Tổng chi phí nhập:</span>
-                    <span className="text-lg font-bold" style={{ color: 'var(--success)' }}>{formatCurrency(totalCostCalc)}</span>
-                  </div>
-                  <div className="text-xs pt-2 border-t flex flex-wrap items-center justify-between gap-2"
-                       style={{ borderColor: 'var(--success-light)', color: 'var(--text-secondary)' }}>
-                    <span>
-                      👉 Tồn kho nhận: <strong style={{ color: 'var(--text-primary)' }}>+{baseQuantityCalc} {selectedProduct?.unit_type || 'đơn vị lẻ'}</strong>
-                    </span>
-                    {Number(form.conversion_rate) > 1 && (
-                      <span>
-                        Giá vốn quy đổi: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(costPerBaseUnitCalc)} / {selectedProduct?.unit_type || 'đơn vị'}</strong>
+                    Hủy
+                  </button>
+                  <button
+                    onClick={createImport}
+                    disabled={creating || !form.product_id || !form.quantity || !form.unit_cost}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}
+                  >
+                    {creating ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Đang xử lý...
                       </span>
+                    ) : (
+                      <>
+                        <PlusIcon />
+                        Nhập hàng
+                      </>
                     )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Body: New Product & Initial Import */}
+                <div className="px-6 py-4 space-y-4 max-h-[65vh] overflow-y-auto custom-scrollbar">
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2">
+                    <span className="text-base">💡</span>
+                    <span>
+                      Hệ thống sẽ <strong>tạo sản phẩm mới</strong>, xếp vào kệ hàng và <strong>lập phiếu nhập kho đầu tiên</strong> ngay trong 1 bước.
+                    </span>
+                  </div>
+
+                  {/* 1. Product Info */}
+                  <div className="p-4 rounded-xl border border-zinc-700/60 bg-zinc-800/30 space-y-3">
+                    <div className="text-xs font-bold text-emerald-400 uppercase tracking-wide">
+                      1. Thông tin sản phẩm mới
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                        Tên sản phẩm <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Nhập tên sản phẩm (VD: Bánh quy AFC lúa mì 200g)"
+                        value={quickForm.product_name}
+                        onChange={e => setQuickForm(f => ({ ...f, product_name: e.target.value }))}
+                        className="w-full py-2.5 px-3 input-themed text-sm font-medium"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Mã vạch sản phẩm
+                        </label>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="Quét hoặc gõ mã..."
+                            value={quickForm.barcode}
+                            onChange={e => setQuickForm(f => ({ ...f, barcode: e.target.value }))}
+                            className="flex-1 py-2 px-3 input-themed text-xs font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCameraScanner(true)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center gap-1"
+                            style={{ background: 'var(--brand-light)', color: 'var(--brand-primary)' }}
+                            title="Mở camera quét mã"
+                          >
+                            <BarcodeScanIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Xếp lên Kệ hàng
+                        </label>
+                        <select
+                          value={quickForm.shelf_id}
+                          onChange={e => setQuickForm(f => ({ ...f, shelf_id: e.target.value }))}
+                          className="w-full py-2 px-3 input-themed text-xs cursor-pointer"
+                        >
+                          <option value="">— Chưa xếp kệ —</option>
+                          {shelves.map(s => (
+                            <option key={s.id} value={s.id}>{s.shelf_name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Giá bán lẻ cho khách (đ) <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="VD: 32000"
+                          value={quickForm.price}
+                          onChange={e => setQuickForm(f => ({ ...f, price: e.target.value }))}
+                          className="w-full py-2 px-3 input-themed text-sm font-bold text-emerald-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Đơn vị lẻ cơ sở
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="VD: lon, cái, gói, chai..."
+                          value={quickForm.unit_type}
+                          onChange={e => setQuickForm(f => ({ ...f, unit_type: e.target.value }))}
+                          className="w-full py-2 px-3 input-themed text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pack checkbox */}
+                    <div className="pt-1">
+                      <label className="inline-flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-zinc-300">
+                        <input
+                          type="checkbox"
+                          checked={quickForm.has_pack}
+                          onChange={e => setQuickForm(f => ({ ...f, has_pack: e.target.checked }))}
+                          className="rounded border-zinc-600 text-emerald-500 focus:ring-emerald-500"
+                        />
+                        <span>Có quy cách sỉ (Thùng / Lốc / Hộp)</span>
+                      </label>
+
+                      {quickForm.has_pack && (
+                        <div className="mt-2.5 p-3 rounded-lg bg-zinc-900/60 border border-zinc-700/60 space-y-2.5 animate-fade-in">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                              <label className="block text-[11px] text-zinc-400 mb-1">Tên quy cách sỉ</label>
+                              <input
+                                type="text"
+                                placeholder="Thùng"
+                                value={quickForm.pack_name}
+                                onChange={e => setQuickForm(f => ({ ...f, pack_name: e.target.value }))}
+                                className="w-full py-1.5 px-2.5 input-themed text-xs font-medium"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] text-zinc-400 mb-1">Tỷ lệ quy đổi</label>
+                              <div className="flex items-center gap-1.5 text-xs text-zinc-300">
+                                <span>1 {quickForm.pack_name || 'thùng'} =</span>
+                                <input
+                                  type="number"
+                                  min="2"
+                                  placeholder="24"
+                                  value={quickForm.pack_rate}
+                                  onChange={e => setQuickForm(f => ({ ...f, pack_rate: e.target.value }))}
+                                  className="w-20 py-1.5 px-2 input-themed text-xs font-bold text-center text-emerald-400"
+                                />
+                                <span>{quickForm.unit_type || 'đơn vị lẻ'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] text-zinc-400 mb-1">Giá bán sỉ cả {quickForm.pack_name || 'thùng'} (đ - không bắt buộc)</label>
+                            <input
+                              type="number"
+                              placeholder="VD: 720000"
+                              value={quickForm.pack_price}
+                              onChange={e => setQuickForm(f => ({ ...f, pack_price: e.target.value }))}
+                              className="w-full py-1.5 px-2.5 input-themed text-xs"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Initial Import info */}
+                  <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-950/20 space-y-3">
+                    <div className="text-xs font-bold text-emerald-400 uppercase tracking-wide">
+                      2. Lô hàng nhập đầu tiên
+                    </div>
+
+                    {quickForm.has_pack && (
+                      <div>
+                        <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Đơn vị tính khi nhập lô này
+                        </label>
+                        <div className="flex flex-wrap gap-4 text-xs">
+                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="import_unit_choice"
+                              checked={quickForm.import_unit === 'pack'}
+                              onChange={() => setQuickForm(f => ({ ...f, import_unit: 'pack' }))}
+                              className="text-emerald-500"
+                            />
+                            <span>📦 Nhập theo {quickForm.pack_name || 'Thùng'} ({quickForm.pack_rate || 1} {quickForm.unit_type || 'lẻ'})</span>
+                          </label>
+                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="import_unit_choice"
+                              checked={quickForm.import_unit === 'base'}
+                              onChange={() => setQuickForm(f => ({ ...f, import_unit: 'base' }))}
+                              className="text-emerald-500"
+                            />
+                            <span>🔹 Nhập theo {quickForm.unit_type || 'Đơn vị lẻ'}</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Số lượng nhập ({quickForm.has_pack && quickForm.import_unit === 'pack' ? (quickForm.pack_name || 'thùng') : (quickForm.unit_type || 'đơn vị')}) <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="VD: 10"
+                          value={quickForm.quantity}
+                          onChange={e => setQuickForm(f => ({ ...f, quantity: e.target.value }))}
+                          className="w-full py-2 px-3 input-themed text-sm font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Giá nhập / 1 {quickForm.has_pack && quickForm.import_unit === 'pack' ? (quickForm.pack_name || 'thùng') : (quickForm.unit_type || 'đơn vị')} (đ) <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="VD: 216000"
+                          value={quickForm.unit_cost}
+                          onChange={e => setQuickForm(f => ({ ...f, unit_cost: e.target.value }))}
+                          className="w-full py-2 px-3 input-themed text-sm font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Preview cost */}
+                    {quickTotalCost > 0 && (
+                      <div className="rounded-xl p-3 bg-emerald-500/10 border border-emerald-500/20 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-emerald-300">Tổng chi phí nhập:</span>
+                          <span className="text-base font-bold text-emerald-400">{formatCurrency(quickTotalCost)}</span>
+                        </div>
+                        <div className="text-[11px] pt-1.5 border-t border-emerald-500/20 flex flex-wrap items-center justify-between gap-2 text-zinc-300">
+                          <span>👉 Tồn kho nhận: <strong className="text-emerald-300">+{quickBaseQuantity} {quickForm.unit_type || 'đơn vị lẻ'}</strong></span>
+                          {quickForm.has_pack && quickForm.import_unit === 'pack' && (
+                            <span>Giá vốn quy đổi: <strong className="text-emerald-300">{formatCurrency(quickCostPerBase)} / {quickForm.unit_type || 'đơn vị lẻ'}</strong></span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Nhà cung cấp
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="VD: Đại lý Minh Phát"
+                          value={quickForm.supplier_name}
+                          onChange={e => setQuickForm(f => ({ ...f, supplier_name: e.target.value }))}
+                          className="w-full py-2 px-3 input-themed text-xs"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
+                          Ngày nhập
+                        </label>
+                        <input
+                          type="date"
+                          value={quickForm.import_date}
+                          onChange={e => setQuickForm(f => ({ ...f, import_date: e.target.value }))}
+                          className="w-full py-2 px-3 input-themed text-xs"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {/* Supplier */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Nhà cung cấp
-                </label>
-                <input
-                  type="text"
-                  value={form.supplier_name}
-                  onChange={e => setForm(f => ({ ...f, supplier_name: e.target.value }))}
-                  placeholder="VD: Đại lý Minh Phát"
-                  className="w-full py-2.5 px-3 input-themed text-sm"
-                />
-              </div>
+                {/* Footer for New Product */}
+                <div className="flex items-center justify-between gap-3 px-6 py-4"
+                     style={{ borderTop: '1px solid var(--border-secondary)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setImportMode('existing')}
+                    className="px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-zinc-400 hover:text-white"
+                  >
+                    ← Quay lại hàng có sẵn
+                  </button>
 
-              {/* Import date */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Ngày nhập
-                </label>
-                <input
-                  type="date"
-                  value={form.import_date}
-                  onChange={e => setForm(f => ({ ...f, import_date: e.target.value }))}
-                  className="w-full py-2.5 px-3 input-themed text-sm"
-                />
-              </div>
-
-              {/* Note */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Ghi chú
-                </label>
-                <textarea
-                  value={form.note}
-                  onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-                  placeholder="VD: Nhập thêm do sắp Tết..."
-                  rows={2}
-                  className="w-full py-2.5 px-3 input-themed text-sm resize-none"
-                />
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4"
-                 style={{ borderTop: '1px solid var(--border-secondary)' }}>
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer"
-                style={{ color: 'var(--text-secondary)', background: 'var(--bg-inset)' }}
-              >
-                Hủy
-              </button>
-              <button
-                onClick={createImport}
-                disabled={creating || !form.product_id || !form.quantity || !form.unit_cost}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}
-              >
-                {creating ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Đang xử lý...
-                  </span>
-                ) : (
-                  <>
-                    <PlusIcon />
-                    Nhập hàng
-                  </>
-                )}
-              </button>
-            </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                      style={{ color: 'var(--text-secondary)', background: 'var(--bg-inset)' }}
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreateNewProductAndImport}
+                      disabled={creating}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer disabled:opacity-50"
+                      style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}
+                    >
+                      {creating ? (
+                        <span className="flex items-center gap-2">
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Đang lưu & Nhập kho...
+                        </span>
+                      ) : (
+                        <>
+                          <PlusIcon />
+                          Tạo sản phẩm & Nhập kho
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>,
         document.body
       )}
+      {/* Camera Barcode Scanner Modal */}
+      <CameraScannerModal
+        isOpen={showCameraScanner}
+        onClose={() => setShowCameraScanner(false)}
+        onDetected={handleScanBarcode}
+        products={products}
+      />
+
+      {/* Printable A4 Report Modal */}
+      <PrintableA4Report
+        isOpen={showA4Report}
+        onClose={() => setShowA4Report(false)}
+        title="BẢNG KÊ CHI TIẾT HÀNG HÓA MUA VÀO (MẪU S2-HKD)"
+        subTitle="Theo dõi chi phí đầu vào theo Thông tư 88/2021/TT-BTC ngày 08/10/2021 của Bộ Tài chính"
+        items={filteredImports}
+        dateRange={(filterFrom && filterTo) ? `Từ ngày ${filterFrom} đến ngày ${filterTo}` : (filterFrom ? `Từ ngày ${filterFrom}` : '')}
+        storeName={storeName}
+      />
     </div>
   );
 }

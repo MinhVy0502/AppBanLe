@@ -33,7 +33,7 @@ exports.createProduct = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const store_id = req.store_id;
-    const { product_name, price, cost_price, stock, shelf_id, unit_type, units_per_pack, units, allow_retail } = req.body;
+    const { product_name, price, cost_price, stock, shelf_id, unit_type, units_per_pack, units, allow_retail, barcode } = req.body;
 
     if (!product_name || !product_name.trim()) {
       await t.rollback();
@@ -54,6 +54,7 @@ exports.createProduct = async (req, res, next) => {
     const finalUnitType = unit_type && String(unit_type).trim() ? String(unit_type).trim().toLowerCase() : 'lon';
     const finalUnitsPer = units_per_pack && Number(units_per_pack) > 0 ? Number(units_per_pack) : 1;
     const finalAllowRetail = allow_retail !== undefined ? !!allow_retail : true;
+    const finalBarcode = barcode && String(barcode).trim() ? String(barcode).trim() : null;
 
     if (shelf_id) {
       const shelf = await Shelf.findOne({
@@ -80,6 +81,7 @@ exports.createProduct = async (req, res, next) => {
       unit_type: finalUnitType,
       units_per_pack: finalUnitsPer,
       allow_retail: finalAllowRetail,
+      barcode: finalBarcode,
     }, { transaction: t });
 
     if (Array.isArray(units) && units.length > 0) {
@@ -139,7 +141,7 @@ exports.updateProduct = async (req, res, next) => {
       });
     }
 
-    const { product_name, price, cost_price, stock, unit_type, units_per_pack, units, shelf_id, allow_retail } = req.body;
+    const { product_name, price, cost_price, stock, unit_type, units_per_pack, units, shelf_id, allow_retail, barcode } = req.body;
 
     if (product_name !== undefined) {
       if (!product_name.trim()) {
@@ -153,6 +155,7 @@ exports.updateProduct = async (req, res, next) => {
     if (stock !== undefined) product.stock = Number(stock);
     if (shelf_id !== undefined) product.shelf_id = shelf_id || null;
     if (allow_retail !== undefined) product.allow_retail = !!allow_retail;
+    if (barcode !== undefined) product.barcode = barcode && String(barcode).trim() ? String(barcode).trim() : null;
 
     if (unit_type !== undefined && String(unit_type).trim()) {
       product.unit_type = String(unit_type).trim().toLowerCase();

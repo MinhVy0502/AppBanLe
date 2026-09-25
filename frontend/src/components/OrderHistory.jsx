@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
+import ThermalReceipt from './common/ThermalReceipt';
+import { exportOrdersToExcel } from '../utils/excelExport';
 
 /* ===================================================================
    SVG ICONS
@@ -12,11 +14,6 @@ const ReceiptIcon = ({ className = 'w-5 h-5' }) => (
 const SearchIcon = ({ className = 'w-5 h-5' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-  </svg>
-);
-const CalendarIcon = ({ className = 'w-5 h-5' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
   </svg>
 );
 const TrashIcon = ({ className = 'w-4 h-4' }) => (
@@ -39,11 +36,6 @@ const ClockIcon = ({ className = 'w-4 h-4' }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
   </svg>
 );
-const PackageIcon = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-  </svg>
-);
 
 /* ===================================================================
    HELPERS
@@ -58,20 +50,29 @@ const formatTime = (d) => {
   return new Date(d).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 };
 
-/* ===================================================================
-   COMPONENT: OrderHistory
-   =================================================================== */
-export default function OrderHistory() {
+export default function OrderHistory({ store: propStore }) {
   const [orders, setOrders] = useState([]);
+  const [store, setStore] = useState(propStore || null);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [printingOrder, setPrintingOrder] = useState(null);
 
   // Filters
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    if (propStore) setStore(propStore);
+  }, [propStore]);
+
+  useEffect(() => {
+    fetchOrders();
+    api.get('/profile').then(res => {
+      const s = res?.data || res;
+      if (s && s.id) setStore(s);
+    }).catch(() => {});
+  }, []);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -80,7 +81,7 @@ export default function OrderHistory() {
       if (dateFrom) url += `&from=${dateFrom}`;
       if (dateTo) url += `&to=${dateTo}`;
       const res = await api.get(url);
-      setOrders(res.data);
+      setOrders(res.data?.data || res.data || []);
     } catch (err) {
       console.error('Lỗi tải hóa đơn:', err);
     }
@@ -107,6 +108,13 @@ export default function OrderHistory() {
     setDeletingId(null);
   };
 
+  const handlePrintOrder = (order) => {
+    setPrintingOrder(order);
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
   // Summary
   const summary = useMemo(() => {
     const totalRevenue = orders.reduce((s, o) => s + Number(o.total_price), 0);
@@ -121,197 +129,269 @@ export default function OrderHistory() {
       <div className="flex items-center justify-center py-32">
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 mb-4">
-            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: '#a855f7', animationDelay: '0s' }} />
-            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: '#ec4899', animationDelay: '0.2s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: '#3b82f6', animationDelay: '0s' }} />
+            <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: '#10b981', animationDelay: '0.2s' }} />
             <div className="w-3 h-3 rounded-full animate-pulse-dot" style={{ background: 'var(--brand-primary)', animationDelay: '0.4s' }} />
           </div>
-          <p style={{ color: 'var(--text-muted)' }} className="font-medium">Đang tải hóa đơn...</p>
+          <p style={{ color: 'var(--text-muted)' }} className="font-semibold text-xs">Đang tải lịch sử đơn hàng...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-5 lg:p-7 max-w-7xl mx-auto pb-24 lg:pb-8 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-               style={{ background: 'linear-gradient(135deg, #a855f7, #ec4899)', boxShadow: '0 4px 12px rgba(168,85,247,0.3)' }}>
+          <div
+            className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-md flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}
+          >
             <ReceiptIcon className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Lịch sử Hóa đơn</h1>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{summary.count} hóa đơn</p>
+            <h1 className="text-xl font-extrabold" style={{ color: 'var(--text-primary)' }}>Lịch sử Hóa đơn</h1>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{summary.count} hóa đơn đã tạo</p>
+          </div>
+        </div>
+
+        {/* Revenue Badges */}
+        <div
+          className="flex items-center gap-3 p-2.5 rounded-2xl border border-secondary text-xs card-themed"
+          style={{ background: 'var(--bg-inset)' }}
+        >
+          <div>
+            <span className="block text-[10px]" style={{ color: 'var(--text-muted)' }}>Doanh thu:</span>
+            <strong className="text-emerald-400 font-bold text-xs sm:text-sm">{formatPrice(summary.totalRevenue)}</strong>
+          </div>
+          <div className="w-[1px] h-6" style={{ background: 'var(--border-secondary)' }} />
+          <div>
+            <span className="block text-[10px]" style={{ color: 'var(--text-muted)' }}>Lợi nhuận:</span>
+            <strong className="text-indigo-400 font-bold text-xs sm:text-sm">{formatPrice(summary.totalProfit)}</strong>
           </div>
         </div>
       </div>
 
       {/* Filter bar */}
-      <div className="card-themed p-4 mb-6 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Từ ngày</label>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input-themed text-sm" />
+      <div className="card-themed p-3.5 sm:p-4 mb-5 rounded-3xl border border-secondary shadow-sm">
+        <div className="grid grid-cols-2 sm:flex sm:items-end gap-2.5">
+          <div className="col-span-1">
+            <label className="block text-[11px] font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>Từ ngày</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="input-themed w-full py-2 px-2.5 text-xs rounded-xl font-medium"
+            />
           </div>
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Đến ngày</label>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input-themed text-sm" />
+          <div className="col-span-1">
+            <label className="block text-[11px] font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>Đến ngày</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="input-themed w-full py-2 px-2.5 text-xs rounded-xl font-medium"
+            />
           </div>
-          <button onClick={applyFilter} className="btn-primary flex items-center gap-1.5">
-            <SearchIcon className="w-4 h-4" /> Lọc
-          </button>
-          {(dateFrom || dateTo) && (
-            <button onClick={clearFilter} className="btn-secondary text-sm">Xóa bộ lọc</button>
-          )}
-          <div className="ml-auto flex items-center gap-4 text-sm">
-            <span style={{ color: 'var(--text-muted)' }}>
-              Doanh thu: <strong style={{ color: 'var(--success)' }}>{formatPrice(summary.totalRevenue)}</strong>
-            </span>
-            {summary.totalProfit > 0 && (
-              <span style={{ color: 'var(--text-muted)' }}>
-                Lợi nhuận: <strong style={{ color: 'var(--brand-primary)' }}>{formatPrice(summary.totalProfit)}</strong>
-              </span>
+          <div className="col-span-2 sm:col-span-1 flex items-center gap-2 flex-wrap sm:flex-nowrap pt-1 sm:pt-0">
+            <button
+              type="button"
+              onClick={applyFilter}
+              className="btn-primary flex-1 sm:flex-initial py-2 px-3 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <SearchIcon className="w-3.5 h-3.5" /> Lọc
+            </button>
+            {(dateFrom || dateTo) && (
+              <button
+                type="button"
+                onClick={clearFilter}
+                className="btn-secondary py-2 px-3 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Xóa lọc
+              </button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                if (orders.length === 0) {
+                  alert('Không có đơn hàng nào để xuất Excel.');
+                  return;
+                }
+                exportOrdersToExcel(orders, {
+                  storeName: store?.store_name || 'CỬA HÀNG BÁN LẺ',
+                  fromDate: dateFrom,
+                  toDate: dateTo,
+                });
+              }}
+              className="flex-1 sm:flex-initial py-2 px-3 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer border border-emerald-500/30 hover:border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 transition-all sm:ml-auto"
+              title="Xuất Báo cáo Doanh thu ra file Excel chuẩn Mẫu S1-HKD"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 13.5l3 3m0 0l3-3m-3 3v-6" />
+              </svg>
+              <span>Xuất Excel (.xlsx)</span>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Order list */}
       {orders.length === 0 ? (
-        <div className="text-center py-20 animate-fade-in">
-          <ReceiptIcon className="w-14 h-14 mx-auto mb-4" style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-          <h3 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Chưa có hóa đơn nào</h3>
-          <p className="text-sm" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
-            {dateFrom || dateTo ? 'Không tìm thấy hóa đơn trong khoảng thời gian đã chọn.' : 'Hóa đơn sẽ xuất hiện ở đây sau khi tính tiền.'}
+        <div className="card-themed p-12 text-center rounded-3xl border border-secondary">
+          <ReceiptIcon className="w-14 h-14 mx-auto mb-3 opacity-30 text-muted" />
+          <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Chưa có hóa đơn nào</h3>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+            Hóa đơn sẽ tự động lưu vào đây sau mỗi lần thanh toán.
           </p>
         </div>
       ) : (
-        <div className="space-y-3 animate-fade-in">
-          {orders.map((order, idx) => {
+        <div className="space-y-2.5">
+          {orders.map((order) => {
             const isExpanded = expandedId === order.id;
             const profit = Number(order.total_price) - (Number(order.total_cost) || 0);
             const items = order.items || [];
+            const isTransfer = order.payment_method === 'transfer';
+
             return (
-              <div key={order.id}
-                className="rounded-2xl overflow-hidden transition-all"
-                style={{
-                  background: 'var(--card-bg)',
-                  border: `1px solid ${isExpanded ? 'var(--card-hover-border)' : 'var(--card-border)'}`,
-                  boxShadow: isExpanded ? 'var(--shadow-lg)' : 'var(--shadow-sm)',
-                  animationDelay: `${Math.min(idx * 0.02, 0.3)}s`,
-                }}>
-                {/* Order header row */}
-                <div className="flex items-center gap-3 p-4 cursor-pointer group"
-                     onClick={() => setExpandedId(isExpanded ? null : order.id)}>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                       style={{ background: order.is_debt ? 'var(--warning-bg)' : 'rgba(168,85,247,0.1)' }}>
-                    <span className="text-xs font-bold" style={{ color: order.is_debt ? 'var(--warning)' : '#a855f7' }}>
-                      #{order.id}
-                    </span>
+              <div
+                key={order.id}
+                className="card-themed rounded-2xl overflow-hidden border border-secondary shadow-sm transition-all"
+              >
+                {/* Header row */}
+                <div
+                  className="p-3.5 flex items-center gap-3 cursor-pointer group hover:bg-surface-hover"
+                  onClick={() => setExpandedId(isExpanded ? null : order.id)}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs flex-shrink-0"
+                    style={{
+                      background: order.is_debt
+                        ? 'rgba(245, 158, 11, 0.15)'
+                        : isTransfer
+                        ? 'rgba(14, 165, 233, 0.15)'
+                        : 'rgba(16, 185, 129, 0.15)',
+                      color: order.is_debt ? '#f59e0b' : isTransfer ? '#0ea5e9' : '#10b981',
+                    }}
+                  >
+                    #{order.id}
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{formatPrice(order.total_price)}</span>
+                      <span className="font-black text-sm sm:text-base" style={{ color: 'var(--text-primary)' }}>
+                        {formatPrice(order.total_price)}
+                      </span>
+
+                      {/* Payment Method Badge */}
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md"
+                        style={{
+                          background: order.is_debt
+                            ? 'rgba(245, 158, 11, 0.12)'
+                            : isTransfer
+                            ? 'rgba(14, 165, 233, 0.12)'
+                            : 'rgba(16, 185, 129, 0.12)',
+                          color: order.is_debt ? '#f59e0b' : isTransfer ? '#0ea5e9' : '#10b981',
+                        }}
+                      >
+                        {order.is_debt
+                          ? (order.debt_paid ? 'Đã trả nợ' : 'Mua chịu (Nợ)')
+                          : isTransfer
+                          ? '📱 VietQR'
+                          : '💵 Tiền mặt'}
+                      </span>
+
                       {profit > 0 && (
-                        <span className="text-xs px-2 py-0.5 rounded-md font-medium"
-                              style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-light)' }}>
+                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">
                           +{formatPrice(profit)}
                         </span>
                       )}
-                      {order.is_debt && (
-                        <span className="text-xs px-2 py-0.5 rounded-md font-medium"
-                              style={{
-                                background: order.debt_paid ? 'var(--success-bg)' : 'var(--warning-bg)',
-                                color: order.debt_paid ? 'var(--success)' : 'var(--warning)',
-                                border: order.debt_paid ? '1px solid var(--success-light)' : '1px solid var(--warning-light)',
-                              }}>
-                          {order.debt_paid ? 'Đã trả nợ' : 'Mua chịu'}
+                    </div>
+
+                    <p className="text-[11px] text-muted flex items-center gap-2 mt-1">
+                      <span className="flex items-center gap-1">
+                        <ClockIcon className="w-3 h-3" />
+                        {formatDate(order.created_at)} {formatTime(order.created_at)}
+                      </span>
+                      {order.customer && (
+                        <span className="flex items-center gap-1 font-semibold text-secondary">
+                          <UserIcon className="w-3 h-3" />
+                          {order.customer.customer_name}
                         </span>
                       )}
-                    </div>
-                    <p className="text-xs flex items-center gap-2 mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      <span className="flex items-center gap-1"><ClockIcon className="w-3 h-3" />{formatDate(order.created_at)} {formatTime(order.created_at)}</span>
-                      {order.customer && (
-                        <span className="flex items-center gap-1"><UserIcon className="w-3 h-3" />{order.customer.customer_name}</span>
-                      )}
-                      <span>{items.length} SP</span>
+                      <span>• {items.length} mặt hàng</span>
                     </p>
                   </div>
-                  {/* Delete */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); cancelOrder(order.id); }}
-                    disabled={deletingId === order.id}
-                    title="Hủy hóa đơn"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer flex-shrink-0"
-                    style={{ color: 'var(--danger)' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    {deletingId === order.id
-                      ? <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--danger-light)', borderTopColor: 'var(--danger)' }} />
-                      : <TrashIcon />
-                    }
-                  </button>
-                  <ChevronIcon className="w-4 h-4 transition-transform duration-200 flex-shrink-0"
-                    style={{ color: 'var(--text-muted)', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+
+                  {/* Actions (Print & Delete) */}
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => handlePrintOrder(order)}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-muted hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                      title="In hóa đơn (K80)"
+                    >
+                      🖨️
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => cancelOrder(order.id)}
+                      disabled={deletingId === order.id}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                      title="Hủy đơn & Hoàn kho"
+                    >
+                      {deletingId === order.id ? (
+                        <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <TrashIcon className="w-4 h-4" />
+                      )}
+                    </button>
+
+                    <ChevronIcon
+                      className={`w-4 h-4 text-muted transition-transform duration-200 ml-1 ${
+                        isExpanded ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </div>
                 </div>
 
-                {/* Expanded items */}
+                {/* Expanded Item Breakdown */}
                 {isExpanded && items.length > 0 && (
-                  <div className="px-5 pb-5 animate-slide-down">
-                    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-secondary)' }}>
-                      <table className="w-full text-sm">
+                  <div className="px-4 pb-4 pt-1 border-t border-secondary animate-slide-down">
+                    <div className="rounded-xl overflow-hidden border border-secondary" style={{ background: 'var(--bg-inset)' }}>
+                      <table className="w-full text-xs">
                         <thead>
-                          <tr style={{ background: 'var(--bg-inset)' }}>
-                            <th className="text-left py-2.5 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Sản phẩm</th>
-                            <th className="text-right py-2.5 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Giá bán</th>
-                            <th className="text-right py-2.5 px-3 text-xs font-semibold uppercase tracking-wide hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>Giá vốn</th>
-                            <th className="text-center py-2.5 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>SL</th>
-                            <th className="text-right py-2.5 px-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Thành tiền</th>
+                          <tr className="border-b border-secondary text-muted text-[10px] font-bold">
+                            <th className="text-left py-2 px-3">Sản phẩm</th>
+                            <th className="text-center py-2 px-2">SL</th>
+                            <th className="text-right py-2 px-3">Đơn giá</th>
+                            <th className="text-right py-2 px-3">Thành tiền</th>
                           </tr>
                         </thead>
                         <tbody>
                           {items.map((item, i) => (
-                            <tr key={i} style={{ borderTop: '1px solid var(--border-secondary)' }}>
-                              <td className="py-2.5 px-3">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>{item.product_name}</span>
-                                  {item.unit_name && (
-                                    <span className="px-1.5 py-0.5 rounded text-xs font-semibold"
-                                          style={{ background: 'var(--brand-light)', color: 'var(--brand-primary)', border: '1px solid var(--brand-subtle)' }}>
-                                      {item.unit_name}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-3 text-right" style={{ color: 'var(--text-secondary)' }}>{formatPrice(item.price)}</td>
-                              <td className="py-2.5 px-3 text-right hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>
-                                {item.cost_price ? formatPrice(item.cost_price) : '—'}
-                              </td>
-                              <td className="py-2.5 px-3 text-center" style={{ color: 'var(--text-secondary)' }}>
-                                <span className="font-semibold">{item.quantity}</span>
-                                {item.unit_name && <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>{item.unit_name}</span>}
-                                {item.conversion_rate > 1 && (
-                                  <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                                    (= {item.base_quantity || (item.quantity * item.conversion_rate)} lẻ)
-                                  </div>
+                            <tr key={i} className="border-b border-secondary/50">
+                              <td className="py-2 px-3">
+                                <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                  {item.product_name}
+                                </span>
+                                {item.unit_name && (
+                                  <span className="ml-1 text-[10px] font-bold text-indigo-500 bg-indigo-500/10 px-1 py-0.2 rounded">
+                                    {item.unit_name}
+                                  </span>
                                 )}
                               </td>
-                              <td className="py-2.5 px-3 text-right font-bold" style={{ color: 'var(--text-primary)' }}>
+                              <td className="py-2 px-2 text-center font-bold">{item.quantity}</td>
+                              <td className="py-2 px-3 text-right text-muted">{formatPrice(item.price)}</td>
+                              <td className="py-2 px-3 text-right font-bold text-emerald-500">
                                 {formatPrice(item.price * item.quantity)}
                               </td>
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot>
-                          <tr style={{ borderTop: '2px solid var(--border-primary)' }}>
-                            <td colSpan={3} className="py-2.5 px-3 text-right font-bold hidden sm:table-cell" style={{ color: 'var(--text-secondary)' }}>Tổng cộng:</td>
-                            <td colSpan={2} className="py-2.5 px-3 text-right font-bold sm:hidden" style={{ color: 'var(--text-secondary)' }}>Tổng:</td>
-                            <td className="py-2.5 px-3 text-center" />
-                            <td className="py-2.5 px-3 text-right font-bold text-base" style={{ color: 'var(--success)' }}>{formatPrice(order.total_price)}</td>
-                          </tr>
-                        </tfoot>
                       </table>
                     </div>
                   </div>
@@ -321,6 +401,9 @@ export default function OrderHistory() {
           })}
         </div>
       )}
+
+      {/* Hidden Thermal Receipt for Print */}
+      <ThermalReceipt order={printingOrder} store={store} />
     </div>
   );
 }

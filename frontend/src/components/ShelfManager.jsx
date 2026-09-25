@@ -42,6 +42,7 @@ export default function ShelfManager() {
     stock_pack_quantity: '',
     unit_type: 'lon',
     allow_retail: true,
+    barcode: '',
     units: [],
   });
   const [creatingProduct, setCreatingProduct] = useState(false);
@@ -240,6 +241,7 @@ export default function ShelfManager() {
         unit_type: unit_type ? String(unit_type).trim().toLowerCase() : 'lon',
         units_per_pack: 1,
         allow_retail: allow_retail !== undefined ? allow_retail : true,
+        barcode: productForm.barcode ? String(productForm.barcode).trim() : null,
         units: validUnits,
       };
 
@@ -262,6 +264,7 @@ export default function ShelfManager() {
         stock_pack_quantity: '',
         unit_type: 'lon',
         allow_retail: true,
+        barcode: '',
         units: [],
       });
       setEditingProduct(null);
@@ -289,6 +292,7 @@ export default function ShelfManager() {
           : '',
       unit_type: product.unit_type || 'lon',
       allow_retail: product.allow_retail !== undefined ? product.allow_retail : true,
+      barcode: product.barcode || '',
       units: (product.units || []).map((u) => ({
         unit_name: u.unit_name,
         conversion_rate: String(u.conversion_rate),
@@ -311,6 +315,7 @@ export default function ShelfManager() {
       stock_pack_quantity: '',
       unit_type: 'lon',
       allow_retail: true,
+      barcode: '',
       units: [],
     });
     setShowProductModal(true);
@@ -453,6 +458,7 @@ export default function ShelfManager() {
         unassignedProducts={unassignedProducts}
         deleteProduct={deleteProduct}
         deletingId={deletingId}
+        openEditProduct={openEditProduct}
       />
 
       {/* Shelf detail modal */}

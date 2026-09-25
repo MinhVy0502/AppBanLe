@@ -6,7 +6,7 @@ exports.createOrder = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const store_id = req.store_id;
-    const { total_price, items, customer_id, is_debt } = req.body;
+    const { total_price, items, customer_id, is_debt, payment_method, cash_received, change_amount, note } = req.body;
 
     if (!total_price || Number(total_price) <= 0) {
       await t.rollback();
@@ -68,6 +68,9 @@ exports.createOrder = async (req, res, next) => {
       });
     }
 
+    const effectiveIsDebt = !!(is_debt || payment_method === 'debt');
+    const effectiveMethod = payment_method || (effectiveIsDebt ? 'debt' : 'cash');
+
     if (customer_id) {
       const customer = await Customer.findOne({
         where: { id: customer_id, store_id },
@@ -78,7 +81,7 @@ exports.createOrder = async (req, res, next) => {
         return res.status(404).json({ success: false, message: 'Khách hàng không tồn tại.' });
       }
 
-      if (is_debt) {
+      if (effectiveIsDebt) {
         customer.total_debt = Number(customer.total_debt) + Number(total_price);
         await customer.save({ transaction: t });
       }
@@ -90,8 +93,12 @@ exports.createOrder = async (req, res, next) => {
       total_price: Number(total_price),
       total_cost: totalCost,
       items: orderItems,
-      is_debt: !!is_debt,
+      is_debt: effectiveIsDebt,
       debt_paid: false,
+      payment_method: effectiveMethod,
+      cash_received: cash_received !== undefined ? Number(cash_received) : Number(total_price),
+      change_amount: change_amount !== undefined ? Number(change_amount) : 0,
+      note: note || null,
     }, { transaction: t });
 
     await t.commit();

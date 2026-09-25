@@ -60,19 +60,34 @@ export default function ProductFormModal({
 
         {/* Scrollable Form Body */}
         <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
-          {/* Tên sản phẩm */}
-          <div>
-            <label className="block text-sm font-bold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              Tên sản phẩm <span style={{ color: 'var(--danger)' }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={productForm.product_name}
-              onChange={(e) => setProductForm({ ...productForm, product_name: e.target.value })}
-              placeholder="VD: Bia Tiger nâu, Nước ngọt Coca Cola, Mì Hảo Hảo..."
-              autoFocus
-              className="w-full input-themed text-base py-2.5 px-3 font-medium"
-            />
+          {/* Tên sản phẩm & Mã vạch */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-bold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                Tên sản phẩm <span style={{ color: 'var(--danger)' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={productForm.product_name}
+                onChange={(e) => setProductForm({ ...productForm, product_name: e.target.value })}
+                placeholder="VD: Bia Tiger nâu, Nước ngọt Coca Cola, Mì Hảo Hảo..."
+                autoFocus
+                className="w-full input-themed text-base py-2.5 px-3 font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                Mã vạch (Tùy chọn)
+              </label>
+              <input
+                type="text"
+                value={productForm.barcode || ''}
+                onChange={(e) => setProductForm({ ...productForm, barcode: e.target.value })}
+                placeholder="Quét hoặc gõ mã..."
+                className="w-full input-themed text-sm py-2.5 px-3 font-mono"
+              />
+            </div>
           </div>
 
           {/* TÙY CHỌN: BÁN LẺ VS CHỈ BÁN NGUYÊN THÙNG */}

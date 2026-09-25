@@ -57,6 +57,29 @@ const Order = sequelize.define('Order', {
     defaultValue: false,
     comment: 'Nợ đã thanh toán chưa',
   },
+  payment_method: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'cash',
+    comment: 'Phương thức: cash (tiền mặt), transfer (chuyển khoản QR), debt (ghi nợ)',
+  },
+  cash_received: {
+    type: DataTypes.DECIMAL(12, 2),
+    allowNull: true,
+    defaultValue: 0,
+    comment: 'Số tiền khách đưa',
+  },
+  change_amount: {
+    type: DataTypes.DECIMAL(12, 2),
+    allowNull: true,
+    defaultValue: 0,
+    comment: 'Tiền thối lại khách',
+  },
+  note: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'Ghi chú hóa đơn',
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

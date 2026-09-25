@@ -1,10 +1,11 @@
-import { PackageIcon, TrashIcon } from '../common/Icons';
+import { PackageIcon, TrashIcon, PencilIcon } from '../common/Icons';
 import { formatPrice, getBaseUnitLabel } from '../../utils/formatters';
 
 export default function UnassignedProducts({
   unassignedProducts,
   deleteProduct,
   deletingId,
+  openEditProduct,
 }) {
   if (unassignedProducts.length === 0) return null;
 
@@ -103,18 +104,30 @@ export default function UnassignedProducts({
               )}
             </div>
 
-            <button
-              onClick={() => deleteProduct(product.id)}
-              disabled={deletingId === product.id}
-              title="Xóa sản phẩm"
-              className="w-8 h-8 rounded-lg flex items-center justify-center opacity-0 group-hover/unassigned:opacity-100 transition-all cursor-pointer disabled:opacity-50 text-red-500 hover:bg-red-500/10"
-            >
-              {deletingId === product.id ? (
-                <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin border-red-300 border-t-red-500" />
-              ) : (
-                <TrashIcon className="w-4 h-4" />
+            <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover/unassigned:opacity-100 transition-all flex-shrink-0">
+              {openEditProduct && (
+                <button
+                  onClick={() => openEditProduct(product)}
+                  title="Sửa sản phẩm"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+                  style={{ color: 'var(--brand-primary)', background: 'var(--brand-light)' }}
+                >
+                  <PencilIcon className="w-4 h-4" />
+                </button>
               )}
-            </button>
+              <button
+                onClick={() => deleteProduct(product.id)}
+                disabled={deletingId === product.id}
+                title="Xóa sản phẩm"
+                className="w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer disabled:opacity-50 text-red-500 hover:bg-red-500/10"
+              >
+                {deletingId === product.id ? (
+                  <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin border-red-300 border-t-red-500" />
+                ) : (
+                  <TrashIcon className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
         ))}
       </div>

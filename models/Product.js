@@ -65,6 +65,11 @@ const Product = sequelize.define('Product', {
     defaultValue: true,
     comment: 'Cho phép bán lẻ (true) hoặc chỉ bán nguyên thùng/quy cách (false)',
   },
+  barcode: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    comment: 'Mã vạch của đơn vị cơ sở (chai/lon/gói...)',
+  },
 }, {
   tableName: 'Product',
   timestamps: false,

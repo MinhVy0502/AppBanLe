@@ -29,6 +29,7 @@ export default function ProductGrid({
   filteredProducts,
   cart,
   addToCart,
+  onOpenScanner,
 }) {
   const shelfScrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -52,7 +53,6 @@ export default function ProductGrid({
     updateScrollButtons();
     window.addEventListener('resize', updateScrollButtons);
 
-    // Mouse wheel horizontal scrolling
     const onWheel = (e) => {
       if (e.deltaY !== 0) {
         e.preventDefault();
@@ -110,59 +110,59 @@ export default function ProductGrid({
     if (hasDraggedRef.current) return;
     setSelectedShelfId(id);
   };
+
   return (
     <div className="flex-1 min-w-0">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-5 animate-fade-in-up">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{
-            background: 'linear-gradient(135deg, var(--success), #14b8a6)',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-          }}
-        >
-          <ReceiptIcon className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            Tính tiền
-          </h1>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Bấm vào sản phẩm để thêm vào hóa đơn
-          </p>
-        </div>
-      </div>
-
-      {/* Search & Filter */}
-      <div className="card-themed p-4 mb-5 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
-        <div className="relative mb-3">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none" style={{ color: 'var(--text-muted)' }}>
-            <SearchIcon className="w-5 h-5" />
+      {/* Search & Action Bar */}
+      <div className="card-themed p-3 sm:p-4 mb-4 rounded-3xl border border-secondary shadow-sm">
+        <div className="flex items-center gap-2">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none" style={{ color: 'var(--text-muted)' }}>
+              <SearchIcon className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm theo tên sản phẩm, mã vạch hoặc 4 số cuối..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input-themed w-full py-2.5 text-xs sm:text-sm rounded-2xl"
+              style={{ paddingLeft: '2.5rem', paddingRight: search ? '2.5rem' : '1rem' }}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-xs cursor-pointer font-bold text-muted"
+              >
+                ✕
+              </button>
+            )}
           </div>
-          <input
-            type="text"
-            placeholder="Tìm theo tên sản phẩm..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-themed w-full py-2.5 text-sm rounded-xl"
-            style={{ paddingLeft: '2.75rem', paddingRight: search ? '2.5rem' : '1rem' }}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-xs cursor-pointer font-bold"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              ✕
-            </button>
-          )}
+
+          {/* Camera Scanner Trigger Button */}
+          <button
+            type="button"
+            onClick={onOpenScanner}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-white font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-md hover:brightness-110 active:scale-95 flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-primary-hover))',
+            }}
+            title="Bật Camera Quét Mã Vạch"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+            </svg>
+            <span className="hidden sm:inline">Quét camera</span>
+          </button>
         </div>
 
-        {/* Shelf filter pills with scroll navigation & drag */}
-        <div className="relative flex items-center group/pills">
+        {/* Shelf Filter Pills */}
+        <div className="relative flex items-center mt-3 pt-3 border-t border-secondary">
           {canScrollLeft && (
             <div
-              className="absolute left-0 top-0 bottom-1 flex items-center z-10 pr-6 pointer-events-none"
+              className="absolute left-0 top-0 bottom-0 flex items-center z-10 pr-6 pointer-events-none"
               style={{ background: 'linear-gradient(to right, var(--bg-surface) 50%, transparent)' }}
             >
               <button
@@ -174,9 +174,8 @@ export default function ProductGrid({
                   border: '1px solid var(--border-primary)',
                   color: 'var(--text-primary)',
                 }}
-                title="Cuộn sang trái"
               >
-                <ChevronLeftIcon className="w-4 h-4" />
+                <ChevronLeftIcon className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
@@ -188,15 +187,13 @@ export default function ProductGrid({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            className="flex gap-2 overflow-x-auto pb-1.5 select-none custom-scrollbar cursor-grab active:cursor-grabbing w-full scroll-smooth"
-            style={{
-              scrollbarWidth: 'thin',
-            }}
+            className="flex gap-1.5 overflow-x-auto select-none custom-scrollbar cursor-grab active:cursor-grabbing w-full scroll-smooth pb-0.5"
           >
             <button
+              type="button"
               onClick={() => handleShelfClick('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
-                selectedShelfId === 'all' ? 'text-white' : ''
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
+                selectedShelfId === 'all' ? 'text-white shadow-sm' : ''
               }`}
               style={{
                 background: selectedShelfId === 'all' ? 'var(--brand-primary)' : 'var(--bg-inset)',
@@ -220,9 +217,10 @@ export default function ProductGrid({
               return (
                 <button
                   key={s.id}
+                  type="button"
                   onClick={() => handleShelfClick(String(s.id))}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
-                    isSelected ? 'text-white' : ''
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
+                    isSelected ? 'text-white shadow-sm' : ''
                   }`}
                   style={{
                     background: isSelected ? 'var(--brand-primary)' : 'var(--bg-inset)',
@@ -241,202 +239,112 @@ export default function ProductGrid({
                 </button>
               );
             })}
-
-            <button
-              onClick={() => handleShelfClick('none')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 flex-shrink-0 ${
-                selectedShelfId === 'none' ? 'text-white' : ''
-              }`}
-              style={{
-                background: selectedShelfId === 'none' ? 'var(--brand-primary)' : 'var(--bg-inset)',
-                color: selectedShelfId === 'none' ? '#fff' : 'var(--text-secondary)',
-              }}
-            >
-              Chưa xếp kệ
-              <span
-                className="px-1.5 py-0.2 rounded-full text-[10px]"
-                style={{
-                  background: selectedShelfId === 'none' ? 'rgba(255,255,255,0.25)' : 'var(--bg-surface)',
-                }}
-              >
-                {shelfProductCounts.none}
-              </span>
-            </button>
           </div>
-
-          {canScrollRight && (
-            <div
-              className="absolute right-0 top-0 bottom-1 flex items-center z-10 pl-6 pointer-events-none"
-              style={{ background: 'linear-gradient(to left, var(--bg-surface) 50%, transparent)' }}
-            >
-              <button
-                type="button"
-                onClick={() => handleScrollBy('right')}
-                className="w-7 h-7 rounded-full flex items-center justify-center shadow-md transition-all cursor-pointer pointer-events-auto hover:scale-110 active:scale-95"
-                style={{
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-primary)',
-                  color: 'var(--text-primary)',
-                }}
-                title="Cuộn sang phải"
-              >
-                <ChevronRightIcon className="w-4 h-4" />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Product grid */}
+      {/* Product Grid List */}
       {filteredProducts.length === 0 ? (
-        <div className="card-themed p-12 text-center">
-          <PackageIcon className="w-12 h-12 mx-auto mb-3 opacity-30 text-muted" />
-          <p className="font-semibold text-sm" style={{ color: 'var(--text-muted)' }}>
-            Không tìm thấy sản phẩm nào
+        <div className="card-themed p-12 text-center rounded-3xl border border-secondary">
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-3 flex items-center justify-center text-muted" style={{ background: 'var(--bg-inset)' }}>
+            <PackageIcon className="w-8 h-8 opacity-40" />
+          </div>
+          <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Không tìm thấy sản phẩm</h3>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+            Thử tìm với từ khóa khác hoặc quét mã vạch
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          {filteredProducts.map((product) => {
-            const hasUnits = product.units && product.units.length > 0;
-            const isOnlyPack = product.allow_retail === false && hasUnits;
-            const baseInCart = cart
-              .filter((i) => i.product.id === product.id)
-              .reduce((sum, i) => sum + i.quantity * i.conversion_rate, 0);
-            const remaining = product.stock - baseInCart;
-            const isOutOfStock = remaining <= 0;
-            const baseLabel = getBaseUnitLabel(product.unit_type);
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3">
+          {filteredProducts.map((p) => {
+            const isOutOfStock = p.stock <= 0;
+            const isLowStock = p.stock > 0 && p.stock <= 5;
+            const baseUnit = getBaseUnitLabel(p.unit_type);
 
             return (
               <div
-                key={product.id}
-                className={`card-themed p-3.5 sm:p-4 transition-all flex flex-col justify-between group/card relative ${
-                  isOutOfStock ? 'opacity-50' : 'hover:-translate-y-1'
-                }`}
-                style={{
-                  boxShadow: 'var(--shadow-sm)',
-                }}
+                key={p.id}
+                className="card-themed p-3 rounded-2xl border border-secondary shadow-sm flex flex-col justify-between transition-all hover:border-brand-primary group relative overflow-hidden"
               >
-                {/* Out of stock badge */}
-                {isOutOfStock && (
-                  <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10">
-                    Hết hàng
-                  </div>
-                )}
-
-                {/* Main Product Info */}
-                <div
-                  className={!isOutOfStock && !isOnlyPack ? 'cursor-pointer' : ''}
-                  onClick={() => {
-                    if (!isOutOfStock && !isOnlyPack) addToCart(product);
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-1 mb-1">
-                    <h3
-                      className="font-bold text-sm line-clamp-2 transition-colors"
-                      style={{ color: 'var(--text-primary)' }}
-                    >
-                      {product.product_name}
-                    </h3>
-                  </div>
-
-                  <div className="flex items-center gap-1 mb-2">
+                {/* Product Info */}
+                <div>
+                  <div className="flex items-start justify-between gap-1 mb-1.5">
                     <span
-                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                      style={{
-                        background: 'var(--bg-inset)',
-                        color: 'var(--text-muted)',
-                      }}
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                        isOutOfStock
+                          ? 'bg-red-500/10 text-red-500'
+                          : isLowStock
+                          ? 'bg-amber-500/10 text-amber-500'
+                          : 'bg-emerald-500/10 text-emerald-500'
+                      }`}
                     >
-                      {product.shelf?.shelf_name || 'Chưa xếp kệ'}
+                      {isOutOfStock ? 'Hết hàng' : getStockDisplay(p)}
                     </span>
-                    {isOnlyPack && (
-                      <span
-                        className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                        style={{
-                          background: 'rgba(239, 68, 68, 0.1)',
-                          color: 'var(--danger)',
-                        }}
-                      >
-                        Chỉ bán chẵn
+
+                    {p.barcode && (
+                      <span className="text-[9px] font-mono text-muted bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded" title={`Mã vạch: ${p.barcode}`}>
+                        #{p.barcode.slice(-4)}
                       </span>
                     )}
                   </div>
 
-                  {/* Stock and Price */}
-                  <div className="flex items-baseline justify-between mt-auto">
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      Tồn: <span className="font-semibold">{getStockDisplay(product)}</span>
-                    </p>
-                  </div>
-
-                  <div className="mt-1 flex items-baseline justify-between">
-                    <p className="font-bold text-base" style={{ color: 'var(--brand-primary)' }}>
-                      {isOnlyPack
-                        ? `${formatPrice(product.units[0].price)}`
-                        : `${formatPrice(product.price)}`}
-                      <span className="text-xs font-normal opacity-70 ml-0.5">
-                        /{isOnlyPack ? product.units[0].unit_name.toLowerCase() : baseLabel.toLowerCase()}
-                      </span>
-                    </p>
-                  </div>
+                  <h4
+                    className="font-bold text-xs sm:text-sm line-clamp-2 leading-tight mb-2 group-hover:text-indigo-500 transition-colors"
+                    style={{ color: 'var(--text-primary)' }}
+                    title={p.product_name}
+                  >
+                    {p.product_name}
+                  </h4>
                 </div>
 
-                {/* Quick Unit Selector */}
-                {hasUnits && !isOutOfStock && (
-                  <div
-                    className="mt-2.5 pt-2 border-t flex flex-col gap-1.5"
-                    style={{ borderColor: 'var(--border-secondary)' }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {!isOnlyPack && (
+                {/* Purchase Buttons (Base unit + Packaging units) */}
+                <div className="space-y-1.5 pt-2 border-t border-secondary">
+                  {/* Base Unit Button */}
+                  {p.allow_retail !== false && (
+                    <button
+                      type="button"
+                      disabled={isOutOfStock}
+                      onClick={() => addToCart(p, null)}
+                      className="w-full py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-between active:scale-95"
+                      style={{
+                        background: 'var(--bg-inset)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      <span className="truncate text-left text-[11px]">
+                        +1 {baseUnit}
+                      </span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatPrice(p.price)}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Additional Pack Units (e.g. Thùng, Lốc) */}
+                  {(p.units || []).map((u) => {
+                    const canAfford = p.stock >= u.conversion_rate;
+                    return (
                       <button
+                        key={u.id}
                         type="button"
-                        onClick={() => addToCart(product)}
-                        disabled={remaining < 1}
-                        className="w-full text-xs font-bold py-1.5 px-2.5 rounded-lg text-left flex items-center justify-between transition-all cursor-pointer hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{ background: 'var(--brand-primary)', color: '#fff' }}
+                        disabled={!canAfford}
+                        onClick={() => addToCart(p, u)}
+                        className="w-full py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-between active:scale-95"
+                        style={{
+                          background: 'rgba(99, 102, 241, 0.08)',
+                          color: 'var(--brand-primary)',
+                        }}
                       >
-                        <span>Bán lẻ ({baseLabel.toLowerCase()})</span>
-                        <span>{formatPrice(product.price)}</span>
+                        <span className="truncate text-left text-[11px]">
+                          +1 {u.unit_name} <span className="opacity-70 font-normal">({u.conversion_rate})</span>
+                        </span>
+                        <span className="font-bold">
+                          {formatPrice(u.price)}
+                        </span>
                       </button>
-                    )}
-                    {product.units.map((u) => {
-                      const canAdd = remaining >= u.conversion_rate;
-                      return (
-                        <button
-                          key={u.id || u.unit_name}
-                          type="button"
-                          onClick={() => {
-                            if (canAdd) {
-                              addToCart(product, u);
-                            } else {
-                              alert(`Kho chỉ còn ${remaining} ${baseLabel.toLowerCase()}, không đủ ${u.conversion_rate} ${baseLabel.toLowerCase()} để bán 1 ${u.unit_name}. Vui lòng nhập thêm hàng.`);
-                            }
-                          }}
-                          className={`w-full text-xs font-semibold py-1.5 px-2.5 rounded-lg text-left flex items-center justify-between transition-all cursor-pointer ${
-                            canAdd ? 'hover:opacity-90' : 'opacity-70 hover:opacity-100'
-                          }`}
-                          style={{
-                            background: canAdd ? (isOnlyPack ? 'var(--brand-primary)' : 'var(--bg-surface)') : 'var(--bg-inset)',
-                            color: canAdd ? (isOnlyPack ? '#fff' : 'var(--text-primary)') : 'var(--text-muted)',
-                            border: canAdd ? (isOnlyPack ? 'none' : '1px solid var(--border-primary)') : '1px dashed var(--border-secondary)',
-                          }}
-                        >
-                          <div className="truncate flex items-center gap-1">
-                            <span>📦 {u.unit_name} ({u.conversion_rate})</span>
-                            {!canAdd && (
-                              <span className="text-[10px] font-bold text-amber-500">
-                                ({remaining}/{u.conversion_rate})
-                              </span>
-                            )}
-                          </div>
-                          <span className="font-bold flex-shrink-0">{formatPrice(u.price)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </div>
             );
           })}

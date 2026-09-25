@@ -113,7 +113,7 @@ exports.login = async (req, res, next) => {
 exports.getProfile = async (req, res, next) => {
   try {
     const store = await Store.findByPk(req.store_id, {
-      attributes: ['id', 'email', 'store_name', 'created_at'],
+      attributes: ['id', 'email', 'store_name', 'bank_id', 'bank_account_no', 'bank_account_name', 'created_at'],
     });
 
     if (!store) {
@@ -121,6 +121,58 @@ exports.getProfile = async (req, res, next) => {
     }
 
     return res.json({ success: true, data: store });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PUT /api/profile/bank
+exports.updateBankInfo = async (req, res, next) => {
+  try {
+    const store = await Store.findByPk(req.store_id);
+    if (!store) {
+      return res.status(404).json({ success: false, message: 'Cửa hàng không tồn tại.' });
+    }
+
+    const { bank_id, bank_account_no, bank_account_name, password } = req.body;
+
+    // Chuẩn hóa số tài khoản (bỏ mọi khoảng trắng, ký tự thừa)
+    const cleanAccountNo = bank_account_no !== undefined
+      ? (bank_account_no ? String(bank_account_no).replace(/\s+/g, '').trim() : null)
+      : store.bank_account_no;
+
+    // Kiểm tra bảo mật: Bắt buộc nhập mật khẩu tài khoản để xác nhận cài đặt ngân hàng
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng nhập mật khẩu tài khoản của bạn để xác nhận cài đặt tài khoản ngân hàng.',
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, store.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Mật khẩu không chính xác. Không thể thay đổi tài khoản ngân hàng!',
+      });
+    }
+
+    store.bank_id = bank_id !== undefined ? (bank_id ? String(bank_id).trim().toUpperCase() : null) : store.bank_id;
+    store.bank_account_no = cleanAccountNo;
+    store.bank_account_name = bank_account_name !== undefined ? (bank_account_name ? String(bank_account_name).trim().toUpperCase() : null) : store.bank_account_name;
+
+    await store.save();
+
+    return res.json({
+      success: true,
+      message: 'Cập nhật thông tin ngân hàng thành công!',
+      data: {
+        id: store.id,
+        bank_id: store.bank_id,
+        bank_account_no: store.bank_account_no,
+        bank_account_name: store.bank_account_name,
+      },
+    });
   } catch (error) {
     next(error);
   }

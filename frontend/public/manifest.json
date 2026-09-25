@@ -1,0 +1,32 @@
+{
+  "name": "Hệ Thống Quản Lý Tạp Hóa & Bán Lẻ",
+  "short_name": "Tạp Hóa POS",
+  "description": "Phần mềm bán hàng tạp hóa, quét mã vạch camera, quản lý kệ hàng và xuất báo cáo thuế A4/Excel",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09090b",
+  "theme_color": "#10b981",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

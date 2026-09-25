@@ -261,16 +261,16 @@ export default function Customers() {
                       </span>
                     )}
                     {/* Actions */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover/cust:opacity-100 transition-all flex-shrink-0">
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover/cust:opacity-100 transition-all flex-shrink-0">
                       {hasDebt && (
                         <button onClick={(e) => { e.stopPropagation(); openPayDebt(c); }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                          className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
                           style={{ background: 'var(--success-bg)', color: 'var(--success)', border: '1px solid var(--success-light)' }}>
                           Thu nợ
                         </button>
                       )}
                       <button onClick={(e) => { e.stopPropagation(); openEdit(c); }}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+                        className="w-8 h-8 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
                         style={{ color: 'var(--text-muted)' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-inset)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -278,7 +278,7 @@ export default function Customers() {
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); deleteCustomer(c.id); }}
                         disabled={deletingId === c.id}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+                        className="w-8 h-8 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
                         style={{ color: 'var(--danger)' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--danger-bg)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>

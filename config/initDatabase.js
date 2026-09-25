@@ -23,6 +23,18 @@ async function initDatabase() {
       `ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "base_quantity" INTEGER DEFAULT 0;`,
       `ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "unit_cost" DECIMAL(12, 2) DEFAULT 0;`,
       `ALTER TABLE "Import" ADD COLUMN IF NOT EXISTS "note" TEXT;`,
+      `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "barcode" VARCHAR(100);`,
+      `ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "payment_method" VARCHAR(20) DEFAULT 'cash';`,
+      `ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "cash_received" DECIMAL(12, 2) DEFAULT 0;`,
+      `ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "change_amount" DECIMAL(12, 2) DEFAULT 0;`,
+      `ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "note" TEXT;`,
+      `ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "bank_id" VARCHAR(20);`,
+      `ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "bank_account_no" VARCHAR(50);`,
+      `ALTER TABLE "Store" ADD COLUMN IF NOT EXISTS "bank_account_name" VARCHAR(255);`,
+      // Chỉ mục tăng tốc độ tra cứu mã vạch và báo cáo
+      `CREATE INDEX IF NOT EXISTS "idx_product_store_barcode" ON "Product" ("store_id", "barcode");`,
+      `CREATE INDEX IF NOT EXISTS "idx_order_store_created" ON "Order" ("store_id", "created_at");`,
+      `CREATE INDEX IF NOT EXISTS "idx_import_store_date" ON "Import" ("store_id", "import_date");`,
     ];
 
     for (const sql of migrations) {

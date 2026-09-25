@@ -45,6 +45,7 @@ app.use('/api/dashboard', authenticateToken, dashboardRoutes);
 
 // Route profile (cần token)
 app.get('/api/profile', authenticateToken, authController.getProfile);
+app.put('/api/profile/bank', authenticateToken, authController.updateBankInfo);
 
 // 404 cho các API route không hợp lệ
 app.all('/api/{*path}', (req, res) => {
